@@ -8,6 +8,12 @@
  const ALLOWED=new Set(['KB190_STATUS','KB190_ANALYZE','KB190_OPEN_BASE','KB190_OPEN_OPTIONS']);
  const extensionURL=chrome.runtime.getURL('');
  const validPage=(url)=>{try{return new URL(url).origin===BASE;}catch{return false;}};
+ const sadePage=url=>{
+   try{
+     const path=new URL(url).pathname;
+     return /\\/syspm-web\\/public\\//i.test(path)||/(?:teste[-_]sade|simulador|teste-atendimento)/i.test(path);
+   }catch{return false;}
+ };
  async function getBaseTabs(){
    return (await chrome.tabs.query({})).filter(t=>Number.isInteger(t.id)&&validPage(t.url));
  }
@@ -61,7 +67,7 @@
        const tabs=await chrome.tabs.query({});
        let delivered=0;
        for(const tab of tabs){
-         if(!Number.isInteger(tab.id)||validPage(tab.url))continue;
+         if(!Number.isInteger(tab.id)||!sadePage(tab.url))continue;
          try{
            const res=await chrome.tabs.sendMessage(tab.id,{type:'KB190_SITE_RESULT_TO_UI',
              result:m.result,disclaimer:String(m.disclaimer||'').slice(0,1200)});
