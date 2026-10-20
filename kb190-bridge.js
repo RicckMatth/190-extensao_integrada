@@ -10,12 +10,17 @@
  const VERSION='5.12.0';
  function announce(){window.dispatchEvent(new CustomEvent('base190:extension-ready',{detail:{version:VERSION}}));}
  window.addEventListener('base190:extension-discover',announce);
- window.addEventListener('base190:site-analysis',e=>{
+ window.addEventListener('base190:site-analysis',async e=>{
    const data=e?.detail;
    if(!data?.result||!['classificacao','faq','indefinido'].includes(data.result.tipo))return;
-   try{if(JSON.stringify(data).length>40000)return;
-     chrome.runtime.sendMessage({type:'KB190_SITE_RESULT',result:data.result,
-       disclaimer:String(data.disclaimer||'').slice(0,1200)}).catch(()=>{});
+   try{
+     if(JSON.stringify(data).length>40000)return;
+     // Revogação na Base interrompe TAMBÉM o retorno de resultados ao SADE.
+     const s=await json('/api/session');
+     if(!s.ok||!s.data?.user||s.data.user.mustChangePassword)return;
+     if(sessionStorage.getItem(CONSENT)!==String(s.data.user.id))return;
+     await chrome.runtime.sendMessage({type:'KB190_SITE_RESULT',result:data.result,
+       disclaimer:String(data.disclaimer||'').slice(0,1200)});
    }catch{}
  });
  announce();
