@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Relato 190 + Base de Conhecimento — MODELO TESTE",
-  "version": "5.11.0",
-  "description": "TESTE integrado: reconhecimento automático da Base 190, sincronização de resultados nos dois painéis; uso assistivo, não homologado.",
+  "version": "5.12.0",
+  "description": "MODELO TESTE: chat integrado, envio automático de relatos após autorização por sessão na Base 190, com HTTPS.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -36,7 +36,7 @@
     "https://generativelanguage.googleapis.com/*",
     "https://base-conhecimento-190.vercel.app/*"
   ],
-  "version_name": "5.11.0-teste-auto.1",
+  "version_name": "5.12.0-auto-chat.1",
   "options_page": "kb190-options.html",
   "content_scripts": [
     {
