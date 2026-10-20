@@ -20,32 +20,49 @@
  .kb190Output{margin-top:16px;padding-top:14px;border-top:1px solid #cbd6e5}.kb190Output[hidden]{display:none!important}
  .kb190Output pre{white-space:pre-wrap;word-break:break-word;background:var(--relato-hover,#edf4fb);padding:12px;border-radius:8px;max-height:260px;overflow:auto}
  .kb190Output ul{line-height:1.7;padding-left:20px}
+ .kb190Tabs{display:flex;gap:6px;margin:9px 0 12px}
+ .kb190Tabs button{background:var(--relato-hover,#eef4fc);color:var(--relato-text,#163956);border:1px solid var(--relato-border,#b9ccdd);font-size:12px}
+ .kb190Tabs button[aria-selected="true"]{background:#245cb5;color:white}
+ .kb190Dialog [hidden],.toolbar button[hidden]{display:none!important}
+ .kb190Config .kb190State{font-weight:600}
  `;
  shadow.append(css);
  const settings=$('#settingsView');
  const block=document.createElement('section');block.className='kb190Config';
- block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>Requer uma aba autenticada da Base 190. A extensão não coleta senhas, cookies ou tokens. A análise só ocorre mediante confirmação do operador.</p><button type="button" id="kb190Set">Configurar conexão</button><button type="button" id="kb190Check">Testar conexão</button><p id="kb190State" role="status">Conexão ainda não verificada.</p>';
+ block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>Conexão automática com base-conhecimento-190.vercel.app. Faça login pelo site; sem copiar cookies ou senhas. Só envia relatos após confirmação.</p><button type="button" id="kb190Set">Abrir Base 190</button><button type="button" id="kb190Check">Atualizar conexão</button><p class="kb190State" id="kb190State" role="status">Verificando conexão automática…</p>';
  settings?.append(block);
  const modal=document.createElement('div');modal.className='kb190Modal';modal.hidden=true;
  modal.innerHTML='<div class="kb190Dialog" role="dialog" aria-modal="true" aria-label="Análise com Base 190">'
  +'<h2>🧠 Base 190 — MODELO DE TESTE INTEGRADO</h2>'
+ +'<div class="kb190Tabs" role="tablist" aria-label="Painéis da análise"><button id="kb190TabCompose" role="tab" aria-selected="true" type="button">✏️ Analisar</button><button id="kb190TabResult" role="tab" aria-selected="false" type="button">📋 Resultado</button></div>'
  +'<p id="kb190Info" role="status">Confirme antes de analisar.</p>'
  +'<label for="kb190Input">Relato a analisar (revise e remova dados pessoais)</label>'
  +'<textarea id="kb190Input" maxlength="8000" placeholder="Digite um caso fictício ou revise o relato do simulador."></textarea>'
  +'<div class="kb190Warning">Sistema experimental, sem homologação institucional. Nunca utilize classificação automática como decisão definitiva. O botão de análise envia o texto à Base 190 online, após sua autorização.</div>'
  +'<div class="kb190Buttons"><button class="secondary" id="kb190Close" type="button">Fechar</button>'
- +'<button class="secondary" id="kb190Options" type="button">Configurar</button>'
+ +'<button class="secondary" id="kb190Options" type="button">Abrir Base 190</button>'
  +'<button id="kb190Run" type="button">Confirmar e analisar</button></div>'
  +'<section class="kb190Output" id="kb190Result" hidden></section>'
  +'</div>';
  shadow.append(modal);
- let target=null,previous='',suggestion='',busy=false,latestSade=null;
+ let target=null,previous='',suggestion='',busy=false,latestSade=null,lastData=null;
  const send=async(type,extra={})=>{
    const r=await chrome.runtime.sendMessage({type,...extra});
    if(!r?.ok)throw Error(r?.error||'Base 190 indisponível.');
    return r;
  };
  const notify=t=>{$('#kb190Info').textContent=String(t||'');};
+ function setTab(which){
+   const showResult=which==='result';
+   $('#kb190TabCompose').setAttribute('aria-selected',String(!showResult));
+   $('#kb190TabResult').setAttribute('aria-selected',String(showResult));
+   $('#kb190Input').hidden=showResult;
+   modal.querySelector('label[for="kb190Input"]').hidden=showResult;
+   modal.querySelector('.kb190Warning').hidden=showResult;
+   $('#kb190Run').hidden=showResult;
+   $('#kb190Result').hidden=!showResult;
+   if(showResult&&!lastData)notify('Ainda não há resultado nesta sessão. Abra Analisar e envie um exemplo fictício.');
+ }
  const add=(parent,tag,txt)=>{
    const el=document.createElement(tag);el.textContent=String(txt??'');parent.append(el);return el;
  };
@@ -67,7 +84,7 @@
  function close(){if(busy)return;modal.hidden=true;target=null;previous='';suggestion='';$('#kb190Result').replaceChildren();$('#kb190Result').hidden=true;}
  async function open(){
    if(busy)return;
-   modal.hidden=false;$('#kb190Result').replaceChildren();$('#kb190Result').hidden=true;
+   modal.hidden=false;$('#kb190Result').replaceChildren();setTab('compose');
    target=null;previous='';suggestion='';$('#kb190Input').value='';
    notify('Revise o texto antes de enviar. Nenhum relato será transmitido sem sua confirmação.');
    try{
@@ -89,7 +106,9 @@
    el.dispatchEvent(new win.Event('change',{bubbles:true}));
  }
  function output(data){
-   const box=$('#kb190Result');box.replaceChildren();box.hidden=false;
+   lastData=data;
+   const box=$('#kb190Result');box.replaceChildren();setTab('result');
+   if($('#kb190OpenLast'))$('#kb190OpenLast').hidden=false;
    const r=data?.result;
    if(!r){add(box,'p','A Base 190 não retornou classificação.');return;}
    if(r.tipo==='faq'){add(box,'h3',r.titulo||'Orientação');add(box,'pre',r.resposta||'');return;}
@@ -128,12 +147,17 @@
    }
    if(data?.disclaimer)add(box,'p',data.disclaimer);
  }
- const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_OPTIONS'}).catch(()=>{});
+ const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_BASE'}).catch(()=>{});
+ $('#kb190TabCompose').addEventListener('click',()=>setTab('compose'));
+ $('#kb190TabResult').addEventListener('click',()=>{
+   if(lastData)output(lastData);
+   else setTab('result');
+ });
  $('#kb190Set')?.addEventListener('click',options);
  $('#kb190Options').addEventListener('click',options);
  $('#kb190Check')?.addEventListener('click',async()=>{
    $('#kb190State').textContent='Verificando sessão na Base 190…';
-   try{const x=await send('KB190_STATUS');$('#kb190State').textContent='Conectado: '+x.user+' em '+x.origin+'.';}
+   try{const x=await send('KB190_STATUS');$('#kb190State').textContent='● Conectado automaticamente: '+x.user+'.';}
    catch(e){$('#kb190State').textContent='Não conectado: '+e.message;}
  });
  $('#kb190Close').addEventListener('click',close);
@@ -148,7 +172,19 @@
    finally{busy=false;$('#kb190Run').disabled=false;}
  });
  const toolbar=$('.toolbar'),quick=toolbar?.querySelector('#quick');
- const button=document.createElement('button');button.type='button';button.id='kb190Action';button.textContent='🧠 Base 190';button.title='Modelo de TESTE: consultar a Base 190 autenticada';
+ const button=document.createElement('button');button.type='button';button.id='kb190Action';button.textContent='🧠 Base 190';button.title='Conexão automática com a Base 190 autenticada';
  button.addEventListener('click',open);
- if(quick)quick.after(button);else toolbar?.append(button);
+ const latest=document.createElement('button');latest.type='button';latest.id='kb190OpenLast';latest.textContent='📋 Resultado';
+ latest.title='Reabrir resultado da última análise nesta aba';latest.hidden=true;
+ latest.addEventListener('click',()=>{
+   modal.hidden=false;
+   if(lastData)output(lastData);else setTab('result');
+ });
+ if(quick)quick.after(button,latest);else toolbar?.append(button,latest);
+ // Status inicial, somente sessão: NÃO envia textos ou campos automaticamente.
+ send('KB190_STATUS').then(x=>{
+   if($('#kb190State'))$('#kb190State').textContent='● Conectado automaticamente: '+x.user+'.';
+ }).catch(e=>{
+   if($('#kb190State'))$('#kb190State').textContent='○ Abra a Base 190 e faça login: '+e.message;
+ });
 })();
