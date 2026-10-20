@@ -1,19 +1,34 @@
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Relato 190 - Base 190 - TESTE</title><style>
-:root{color-scheme:light dark}*{box-sizing:border-box}body{font:14px/1.55 system-ui,Arial,sans-serif;max-width:710px;margin:38px auto;padding:0 17px;background:#f3f6fa;color:#152339}
-main{background:white;border:1px solid #d9e2eb;border-radius:18px;padding:28px;box-shadow:0 12px 35px #09203d0e}h1{font-size:25px;margin:0 0 9px}p{color:#506078}label{display:block;font-weight:700;margin:21px 0 7px}
-input{width:100%;padding:13px;border:1px solid #9eafc5;border-radius:9px;font:inherit}button{padding:11px 15px;border:0;border-radius:9px;background:#215ec5;color:white;font-weight:700;margin:12px 7px 0 0;cursor:pointer}
-button.secondary{background:#e1eaf7;color:#1c436d}button:disabled{opacity:.6}#status{padding:11px 13px;border-radius:9px;background:#edf3fd;overflow-wrap:anywhere}
-small{color:#627189}.mark{display:inline-block;font-size:11px;font-weight:900;letter-spacing:1.1px;color:#a65006;background:#fff2de;padding:5px 8px;border-radius:6px}
-@media(prefers-color-scheme:dark){body{background:#0a1425;color:#edf4ff}main{background:#17263e;border-color:#38465c}p,small{color:#b2c4dd}#status{background:#293c59}input{background:#162b49;color:#fff}}
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Relato 190 — Configurações de integração</title><style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;background:#eef3fa;color:#172b49;font:14px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;padding:36px 16px}
+main{max-width:730px;margin:auto;background:white;border:1px solid #d8e2ef;border-radius:18px;padding:clamp(20px,5vw,35px);box-shadow:0 16px 48px #17345912}
+h1{font-size:26px;margin:9px 0}h2{font-size:17px;margin:0}p{color:#60718b}strong{color:inherit}
+.eyebrow{letter-spacing:.13em;font-size:11px;text-transform:uppercase;font-weight:900;color:#2f66c2}.card{background:#f5f8fd;border:1px solid #d8e3f1;border-radius:14px;padding:16px 18px;margin:18px 0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px}.switch{position:relative;display:inline-flex;flex-shrink:0;align-items:center;cursor:pointer;gap:9px}
+.switch input{position:absolute;width:1px;height:1px;opacity:0}.track{width:53px;height:30px;background:#a8b7ca;border-radius:20px;display:block;position:relative;transition:.2s}
+.track:after{content:'';position:absolute;left:4px;top:4px;background:#fff;width:22px;height:22px;border-radius:50%;transition:.2s;box-shadow:0 1px 3px #0003}
+.switch input:checked+.track{background:#1c9a70}.switch input:checked+.track:after{transform:translateX(23px)}
+.switch input:focus-visible+.track{outline:3px solid #4b94ff;outline-offset:2px}
+.switch input:disabled+.track{opacity:.5;cursor:wait}
+button{border:0;border-radius:9px;padding:11px 16px;background:#255fc4;color:white;font:inherit;font-weight:800;cursor:pointer;margin:7px 8px 0 0}
+button.secondary{background:#dbe8fa;color:#214b88}button:disabled{opacity:.55;cursor:wait}
+#status{margin-top:14px;background:#e9f2ff;padding:12px;border-radius:9px;overflow-wrap:anywhere;color:#154077}
+#status[aria-busy="true"]{opacity:.7}
+li{margin:8px 0}.hint{font-size:12px;color:#6b788c}
+@media(prefers-color-scheme:dark){body{background:#081427;color:#ecf2fc}main{background:#15263f;border-color:#354a67}.card{background:#203552;border-color:#3c5879}p,.hint{color:#b3c5e0}button.secondary{background:#314e71;color:#eff6ff}#status{background:#213c60;color:#c6e2ff}}
 </style></head><body><main>
-<span class="mark">MODELO DE TESTE INTEGRADO • NÃO HOMOLOGADO</span>
-<h1>Conexão automática com Base 190</h1>
-<p>O domínio oficial já está vinculado à extensão. Abra a Base 190, faça seu login no site e use a ferramenta normalmente. Não é necessário cadastrar URL ou autorizar domínios manualmente.</p>
-<label for="origin">Endereço da Base 190 (automático)</label>
-<input id="origin" type="url" value="${origin}" readonly autocomplete="off" spellcheck="false">
-<div><button type="button" id="save">Abrir Base 190</button><button type="button" id="test" class="secondary">Verificar login</button></div>
-<p id="status" role="status" aria-live="polite">Carregando configuração…</p>
-<small>Não é necessário inserir senha ou URL. A extensão não acessa cookies nem tokens. A análise de relatos exige sua confirmação. Não utilize dados reais sem autorização institucional.</small>
+<span class="eyebrow">MODELO DE TESTE · v5.13.0</span>
+<h1>Integração Relato 190</h1>
+<p>Configure a conexão diretamente nesta extensão. <b>Não é necessário clicar em autorizar na Base de Conhecimento.</b></p>
+<section class="card">
+ <div class="row"><div><h2 id="toggle-heading">Análise automática de relatos</h2><p id="toggle-info">Permite enviar o texto do campo Relato do SADE à Base 190 após uma pausa na digitação.</p></div>
+ <label class="switch" title="Ativar ou desativar envio automático"><input type="checkbox" id="autoEnabled" aria-labelledby="toggle-heading" aria-describedby="toggle-info"/><span class="track"></span></label></div>
+ <p class="hint">Desativada inicialmente. Ao ativar, o texto do relato poderá ser enviado sem nova confirmação enquanto esta opção permanecer ativa. Não inclui os demais campos separadamente.</p>
+</section>
+<section class="card"><h2>Conexão com a Base 190</h2>
+<p>Endereço fixo: <strong>https://base-conhecimento-190.vercel.app/</strong></p>
+<p>O sistema continua exigindo que você esteja <strong>logado na Base 190</strong> em outra aba do mesmo perfil Chrome.</p>
+<button id="openBase" type="button">Abrir Base 190</button><button id="test" type="button" class="secondary">Testar conexão</button>
+<div id="status" role="status" aria-live="polite" aria-busy="true">Verificando configuração…</div></section>
+<p class="hint">Segurança: HTTPS/TLS, autenticação no servidor e autorização local em chrome.storage.local. A extensão não armazena sua senha ou cookie. Este protótipo não foi homologado para uso com informações reais ou sigilosas.</p>
 </main><script src="kb190-options.js"></script></body></html>
