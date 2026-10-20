@@ -1,110 +1,103 @@
-# Relato 190 + Base de Conhecimento — TESTE INTEGRADO v5.11.0
+# Relato 190 + Base de Conhecimento — MODELO TESTE INTEGRADO v5.12.0
 
-> **MODELO DE TESTE, NÃO HOMOLOGADO** — Versão experimental para testes com relatos fictícios e ambiente SADE simulado. Não processe informações reais, pessoais ou sigilosas sem autorização institucional.
+> **VERSÃO EXPERIMENTAL / NÃO HOMOLOGADA PARA ATENDIMENTO OPERACIONAL.** Utilize relatos fictícios no SADE simulado. O envio de ocorrências reais, dados pessoais ou informações sigilosas depende de autorização institucional e avaliação de segurança/LGPD.
 
-## Download
+## Instalação e download
 
-**[Baixar versão automática integrada v5.11.0 — ZIP](https://github.com/RicckMatth/190-extensao_integrada/archive/refs/heads/main.zip)**
+**[Baixar ZIP da extensão de teste v5.12.0](https://github.com/RicckMatth/190-extensao_integrada/archive/refs/heads/main.zip)**
 
-Este repositório é uma cópia independente de [Relato 190 Essencial v5.9.3](https://github.com/RicckMatth/relato-190-essencial) (commit de origem `209c004c2bf7911bef41b8270249ef3e9ee786a4`) e preserva o reconhecimento SADE com nove campos, endereços, mapas e ferramentas opcionais Gemini. O repositório original não foi alterado.
+1. Baixe e extraia o ZIP.
+2. Abra `chrome://extensions`, ative **Modo do desenvolvedor**, clique em **Carregar sem compactação** e escolha a pasta que contém `manifest.json`.
+3. **Atualize ou remova a versão de teste antiga** (v5.11) para não haver dois complementos interferindo na mesma tela.
+4. Abra [https://base-conhecimento-190.vercel.app/](https://base-conhecimento-190.vercel.app/) e faça login com sua conta autorizada.
+5. Recarregue a aba da Base se ela já estava aberta antes de instalar a extensão.
+6. No menu lateral da Base, escolha **Integração 190**. A extensão será detectada automaticamente, sem informar URL, senha ou token.
+7. Clique em **Autorizar conexão remota** na página da Base. Este é o **único consentimento para transmissão automática**; não será solicitado a cada relato.
+8. Abra o SADE simulado e clique no ícone da extensão para habilitar a detecção do formulário.
 
-## O que mudou na versão 5.11.0
-
-- **Conexão automática e fixa** com **https://base-conhecimento-190.vercel.app/**, sem configurar URL nem pedir autorização de domínio manual. O Chrome solicita permissões necessárias ao instalar/atualizar a extensão.
-- **Login centralizado:** entre normalmente na Base 190; a extensão só consulta a sessão ativa na aba, sem copiar cookies, senhas, tokens ou acessar funções administrativas.
-- **Resultados sincronizados em duas direções:** análise concluída na extensão aparece na página da Base 190; análise concluída no site aparece na aba **📋 Resultado** da extensão quando uma tela SADE/simulador está com a extensão ativa.
-- **Botão no site:** **Ativar extensão** verifica se ela está instalada e oferece instruções quando ausente. A conexão funciona automaticamente, sem depender desse botão.
-- **Aba Analisar + aba Resultado** no modal da extensão. Botão de atalho **📋 Resultado** após a primeira análise.
-- **Sem envio automático do texto:** é obrigatório clicar em **Confirmar e analisar**, conferir o texto e confirmar o envio. Não há gravação de relatos em banco pela integração e não há submissão automática de ocorrências.
-- **Segurança:** recepção de resultados em memória da aba do navegador; o resultado é descartado ao atualizar/fechar a aba. A extensão recebe apenas os resultados de análise e não acessa endpoints administrativos.
-
-## Como instalar no Chrome
-
-1. Baixe o ZIP do link acima e **extraia**.
-2. Acesse `chrome://extensions` → **Modo do desenvolvedor** → **Carregar sem compactação**.
-3. Escolha a pasta extraída que contém `manifest.json`.
-4. Se já instalou a versão de teste anterior, **remova ou substitua a versão antiga** (v5.10.0) antes de ativar a nova. No caso de instalação anterior em pasta extraída, substitua os arquivos nessa pasta e clique em **Atualizar**.
-5. Abra a [Base 190](https://base-conhecimento-190.vercel.app/) e faça login normalmente.
-6. Se a página estava aberta durante a instalação, **recarregue-a** para ativar o content script.
-7. No SADE simulado (`teste-sade.html` servido por HTTP local), clique no ícone da extensão e depois em **🧠 Base 190**.
-
-Não é necessário ir a Opções, informar a URL ou autorizar o site manualmente.
-
-## Experiência de uso
-
-### A. Analisando pela extensão
+## Fluxo novo: análise automática → chat
 
 ```text
-Chrome com extensão ativa + Base 190 já autenticada
-          │
-   Abra o SADE/simulador
-          │
-   Clique em 🧠 Base 190
-          │
- Revise o texto (remova informações pessoais)
-          │
- Clique em Confirmar e analisar
-          │
-  Confirme o envio ao sistema online
-          │
-    POST /api/analyze na Base
-          │
-        RESULTADO
-       ├── Extensão: aba 📋 Resultado
-       └── Site Base 190: seção Integração 190 (abre automaticamente)
+Extensão instalada no Chrome
+     │
+Base 190 aberta e com login válido
+     │
+Botão “Autorizar conexão remota” na Base 190
+     │
+SADE simulado: campo principal de relato detectado
+     │
+Aguarda 3,5 segundos sem nova edição (mínimo 20 caracteres)
+     │
+Extensão envia SOMENTE o texto do relato para a API da Base
+     │
+GET /api/session confirma o usuário + autorização ativa na aba
+POST /api/analyze só é permitido se a autorização continuar válida
+     │
+RESULTADO: chat da Base 190 abre automaticamente
+         + aba 📋 Resultado da extensão é atualizada
 ```
 
-A sugestão de natureza inclui enquadramento orientativo, índice heurístico (não probabilidade), perguntas de triagem e texto revisado quando disponível. Se optar por **Aplicar ao campo**, há **segunda confirmação** e verificação para não sobrescrever alterações feitas desde o início.
+Não é necessário clicar em **Confirmar envio** na extensão após ter autorizado a conexão na Base. Quando o texto do relato for alterado, uma nova análise poderá ser enviada após o período de estabilidade. O envio é interrompido imediatamente pela checagem de autorização ao clicar em **Revogar autorização**, sair da conta ou fechar a aba autorizada. O indicador visual da extensão pode demorar alguns segundos para atualizar.
 
-### B. Analisando diretamente no site
+A extensão **não envia nem encerra ocorrências no SADE**. Só fornece sugestões de enquadramento, perguntas de triagem e possível reformulação de texto. Aplicar qualquer reformulação ao campo do SADE requer confirmação separada e verificação de que o texto original não foi alterado.
 
-1. Na Base 190, use a pesquisa/área **Cérebro 190** e analise um caso fictício.
-2. Após a resposta, o site compartilha **somente o resultado** com a extensão instalada nesta sessão do navegador.
-3. A extensão mostra **📋 Novo resultado** na barra do SADE. Clique para abrir a aba Resultado. A extensão **não escreve nem envia** esse resultado ao SADE automaticamente.
+### O chat no site
 
-O botão **Ativar extensão** no site é opcional: ele solicita a identificação da extensão quando a página não mostrou o estado conectado.
+- O painel **Integração 190** foi redesenhado como conversa responsiva.
+- Cada análise recebida da extensão aparece como uma resposta do Cérebro 190, com natureza e código sugeridos, justificativa e detalhes recolhíveis.
+- O operador pode enviar um cenário fictício diretamente pelo chat e receber uma nova resposta.
+- O resultado também pode ser consultado na aba **📋 Resultado** da extensão.
+- As mensagens e resultados da ponte são mantidos somente na memória da aba aberta, sem gravar relatórios na tabela PostgreSQL pela integração.
 
-### C. O que acontece sem login ou extensão
+### Autorizar e revogar
 
-- Sem a extensão, a Base 190 continua com todas as suas funções normais.
-- Sem login, a extensão pede para abrir o site e entrar; **não contorna a autenticação**.
-- Sem aba aberta da Base, a extensão mostra mensagem para abri-la. Não utiliza chaves de API e não solicita acesso ao PostgreSQL.
-- Sem campo de relato reconhecido, o operador pode usar um exemplo fictício, sem escrever no SADE.
-- A transferência do resultado é em tempo real entre abas do **mesmo perfil Chrome**. Não sincroniza outros aparelhos ou usuários.
+A autorização fica em **sessionStorage**, no domínio da Base 190, vinculada ao ID de usuário autenticado. Ela é específica da aba e não é uma credencial de API. Uma aba da Base deve permanecer aberta, autorizada e com sessão válida. O serviço verifica a sessão autenticada **antes de cada requisição de análise**. O encerramento da sessão e a revogação removem a autorização usada pela ponte.
 
-## Componentes
+A URL está configurada diretamente no `manifest.json`: **https://base-conhecimento-190.vercel.app/**. O Chrome poderá pedir a permissão para o domínio ao instalar/atualizar; isso é uma autorização **do navegador**, separada do botão de transmissão na Base.
 
-| Arquivo | Função |
-|---|---|
-| `manifest.json` | Host fixo + content script automático |
-| `kb190-bg.js` | Roteia consultas e respostas (somente leitura/visualização) |
-| `kb190-bridge.js` | Consulta a API com sessão do próprio site e entrega eventos à página |
-| `kb190-ui.js` | Abas Analisar / Resultado, confirmação e preenchimento assistido |
-| `kb190-options.html/js` | Tela apenas diagnóstica, sem configuração manual de URL |
-| `sade-adapter.js` | Detecção original dos nove campos de atendimento |
-| `test_integracao.js` | Testes estáticos da conexão, permissões e sincronização |
+## Segurança e criptografia
 
-## Testes
+A comunicação utiliza **HTTPS com TLS** entre o navegador e a Vercel. O login da Base usa cookie `Secure`, `HttpOnly` e `SameSite`, validado no servidor. A extensão **não armazena nem exporta cookies, senhas ou tokens de acesso**. A ponte só consulta os endpoints permitidos (`/api/session` e `/api/analyze`), e o serviço remoto exige a autorização ativa na aba.
+
+**TLS criptografa a comunicação em trânsito, mas isto NÃO é criptografia ponta a ponta.** O servidor da Base 190 precisa receber o texto em claro para analisá-lo; portanto, não use dados sensíveis ou sigilosos sem aprovação institucional. Não existe serviço de transmissão oculto, chave mestre em GitHub ou bypass do login.
+
+A transmissão é limitada ao **texto principal do relato**, sem coletar separadamente nome, telefone, número, endereço, bairro ou CEP. **O próprio texto do relato pode conter dados pessoais**: a autorização deve considerar esse risco.
+
+## Recursos anteriores preservados
+
+A extensão experimental foi derivada de [Relato 190 Essencial v5.9.3](https://github.com/RicckMatth/relato-190-essencial), commit `209c004c2bf7911bef41b8270249ef3e9ee786a4`. O repositório original **não foi modificado**. Mantém:
+
+- Detecção automática dos nove campos SADE acessíveis, com fallback por vínculo de campos e confirmação de ambiguidade.
+- Funcionamento em iframes acessíveis, suporte ao simulador e atualização de formulário dinâmico.
+- Integrações opcionais com ViaCEP, BrasilAPI, IBGE, HERE e Google Maps.
+- Ferramentas CAPS, histórico local opcional e integração Gemini independente (sujeita às próprias permissões e riscos).
+
+## Testes automatizados
+
+Com Node.js 20 ou superior:
 
 ```bash
 node test_integracao.js
+node test_integracao_runtime.cjs
 node test_sade_suite.js
 ```
 
-O GitHub Actions também verifica a sintaxe JavaScript. Os testes estáticos não substituem teste real de duas abas Chrome, login da Vercel, fluxo SADE e sessão expirada.
+O GitHub Actions executa também a verificação de sintaxe dos scripts JavaScript. O teste `test_integracao_runtime.cjs` simula as APIs do Chrome, verificando autorização, revogação, sessão vinculada ao usuário e bloqueio de origens não permitidas. **Não substitui** teste manual no Chrome com duas abas e o SADE simulado.
 
-## Segurança e limitações
+## Teste manual recomendado
 
-- **Público e experimental:** jamais versionar senhas, tokens, dados de ocorrências ou capturas de telas sigilosas.
-- Somente o domínio exato `base-conhecimento-190.vercel.app` recebe a ponte de autenticação; as demais permissões preexistentes continuam destinadas às funcionalidades originais.
-- O envio de texto para análise exige confirmação; **a sincronização posterior de resultados é automática**. Não há armazenamento persistente de relatos pela ponte.
-- Ao usar uma análise no SADE, revise integralmente o texto gerado, a prioridade e o código. As regras não estão homologadas para despacho policial real.
-- Apenas abas de SADE identificado ou simuladores recebem resultados originados no site, e somente se a extensão estiver carregada nessas abas.
-- A sincronização ocorre no navegador e não depende de usar um novo login, chave de API ou sincronização em banco de dados.
+1. Sem autorizar na Base: digite um relato fictício no simulador e confirme que **nenhuma análise** aparece.
+2. Autorize na Base e edite o relato: após alguns segundos, confira o chat e o botão **📋 Novo resultado** na extensão.
+3. Revogue na Base e altere o relato: confirme que novos resultados não são transmitidos.
+4. Faça logout e tente analisar; a autorização deve permanecer inativa.
+5. Reentre com outro usuário: a autorização anterior não deve servir para esse novo usuário.
+6. Teste texto curto, texto ambíguo, iframe recriado, navegador sem extensão e sessão vencida.
+7. Teste novamente os nove campos SADE e o preenchimento assistido sem submissão automática.
 
 ## Repositórios
 
-- Versão de teste: **https://github.com/RicckMatth/190-extensao_integrada**
-- Base online: **https://base-conhecimento-190.vercel.app/**
-- Código da Base: https://github.com/RicckMatth/base-conhecimento-190
-- Extensão original: https://github.com/RicckMatth/relato-190-essencial
+- [Esta extensão de teste](https://github.com/RicckMatth/190-extensao_integrada)
+- [Base de Conhecimento Node.js](https://github.com/RicckMatth/base-conhecimento-190)
+- [Extensão original (independente)](https://github.com/RicckMatth/relato-190-essencial)
+
+**Não confundir este modelo com uma ferramenta oficialmente aprovada ou homologada.**
