@@ -1,4 +1,4 @@
-/* Base 190 - interface TESTE (MV3). Nenhum relato é enviado automaticamente. */
+/* Base 190 v5.12.0 TESTE: observação local do relato e envio somente após autorização na Base. */
 (()=>{
  'use strict';
  if(globalThis.__kb190TestUi)return;
@@ -20,6 +20,11 @@
  .kb190Output{margin-top:16px;padding-top:14px;border-top:1px solid #cbd6e5}.kb190Output[hidden]{display:none!important}
  .kb190Output pre{white-space:pre-wrap;word-break:break-word;background:var(--relato-hover,#edf4fb);padding:12px;border-radius:8px;max-height:260px;overflow:auto}
  .kb190Output ul{line-height:1.7;padding-left:20px}
+ .kb190AutoTag{display:inline-flex;align-items:center;color:#dcefff;background:#183a50;border:1px solid #547182;
+   padding:7px 9px;border-radius:8px;font-size:11px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .kb190AutoTag[data-state="on"]{color:#b9f5dd;border-color:#209a70}
+ .kb190AutoTag[data-state="off"]{color:#ffe0a7;border-color:#b88849}
+ .kb190Config p{overflow-wrap:anywhere}
  .kb190Tabs{display:flex;gap:6px;margin:9px 0 12px}
  .kb190Tabs button{background:var(--relato-hover,#eef4fc);color:var(--relato-text,#163956);border:1px solid var(--relato-border,#b9ccdd);font-size:12px}
  .kb190Tabs button[aria-selected="true"]{background:#245cb5;color:white}
@@ -29,7 +34,7 @@
  shadow.append(css);
  const settings=$('#settingsView');
  const block=document.createElement('section');block.className='kb190Config';
- block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>Conexão automática com base-conhecimento-190.vercel.app. Faça login pelo site; sem copiar cookies ou senhas. Só envia relatos após confirmação.</p><button type="button" id="kb190Set">Abrir Base 190</button><button type="button" id="kb190Check">Atualizar conexão</button><p class="kb190State" id="kb190State" role="status">Verificando conexão automática…</p>';
+ block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>O relato será analisado automaticamente somente após você clicar em <b>Autorizar conexão remota</b> na Base 190. Não há senha salva e nenhum preenchimento ou envio de ocorrência automático.</p><button type="button" id="kb190Set">Abrir chat na Base 190</button><button type="button" id="kb190Check">Atualizar estado</button><p class="kb190State" id="kb190State" role="status">Verificando autorização…</p>';
  settings?.append(block);
  const modal=document.createElement('div');modal.className='kb190Modal';modal.hidden=true;
  modal.innerHTML='<div class="kb190Dialog" role="dialog" aria-modal="true" aria-label="Análise com Base 190">'
@@ -46,6 +51,8 @@
  +'</div>';
  shadow.append(modal);
  let target=null,previous='',suggestion='',busy=false,latestSade=null,lastData=null;
+ let remoteAuthorized=false,autoPolling=false,autoBusy=false,autoLastStatus=0,autoRetryAt=0;
+ let observedText='',observedSince=0,sentText='',cachedElement=null;
  const send=async(type,extra={})=>{
    const r=await chrome.runtime.sendMessage({type,...extra});
    if(!r?.ok)throw Error(r?.error||'Base 190 indisponível.');
@@ -86,7 +93,7 @@
    if(busy)return;
    modal.hidden=false;$('#kb190Result').replaceChildren();setTab('compose');
    target=null;previous='';suggestion='';$('#kb190Input').value='';
-   notify('Revise o texto antes de enviar. Nenhum relato será transmitido sem sua confirmação.');
+   notify('Análises são liberadas pelo botão Autorizar conexão remota na Base 190. Sem permissão extra aqui.');
    try{
      target=await findRelato();previous=read(target);
      if(target)$('#kb190Input').value=previous.slice(0,8000);
@@ -148,6 +155,54 @@
    if(data?.disclaimer)add(box,'p',data.disclaimer);
  }
  const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_BASE'}).catch(()=>{});
+ const setAutoState=(authorized,message)=>{
+   remoteAuthorized=authorized===true;
+   const tag=$('#kb190AutoState');
+   if(tag){tag.dataset.state=remoteAuthorized?'on':'off';
+     tag.textContent=remoteAuthorized?'● Análise automática ativa':'○ Aguardando autorização';}
+   if($('#kb190State'))$('#kb190State').textContent=message||
+     (remoteAuthorized?'● Conexão remota autorizada pela Base 190.':'○ Abra a Base 190 e clique em Autorizar conexão remota.');
+ };
+ async function refreshAuthorization(force=false){
+   const now=Date.now();
+   if(!force&&now-autoLastStatus<10000)return remoteAuthorized;
+   autoLastStatus=now;
+   try{
+     const status=await send('KB190_STATUS');
+     setAutoState(status.authorized,'● '+status.user+(status.authorized?' · transmissão autorizada':' · aguardando autorização no site'));
+   }catch(e){setAutoState(false,'○ '+e.message);}
+   return remoteAuthorized;
+ }
+ async function pollRelato(){
+   if(autoPolling||autoBusy)return;
+   autoPolling=true;
+   try{
+     if(!await refreshAuthorization())return;
+     const el=cachedElement?.isConnected?cachedElement:await findRelato();
+     if(!textField(el)){cachedElement=null;observedText='';return;}
+     cachedElement=el;
+     const text=read(el).trim().slice(0,8000);
+     if(text!==observedText){observedText=text;observedSince=Date.now();return;}
+     if(text.length<20||text===sentText||Date.now()-observedSince<3500||Date.now()<autoRetryAt)return;
+     autoBusy=true;
+     if($('#kb190AutoState'))$('#kb190AutoState').textContent='◌ Analisando relato…';
+     target=el;previous=text;
+     try{
+       const result=await send('KB190_AUTO_ANALYZE',{text});
+       sentText=text;autoRetryAt=0;output(result);
+       if($('#kb190OpenLast'))$('#kb190OpenLast').textContent='📋 Novo resultado';
+       if($('#kb190AutoState'))$('#kb190AutoState').textContent='✓ Resultado disponível';
+       // O site abre o chat automaticamente ao receber a resposta.
+       if(!modal.hidden)notify('Nova análise recebida. Revise sempre o enquadramento.');
+     }catch(e){
+       autoRetryAt=Date.now()+15000;
+       if($('#kb190State'))$('#kb190State').textContent='Análise não realizada: '+e.message;
+       if(/autorize|autorização|sessão|login|entre na base/i.test(e.message))setAutoState(false);
+     }finally{autoBusy=false;}
+   }catch(e){
+     autoRetryAt=Date.now()+15000;
+   }finally{autoPolling=false;}
+ }
  // Resultados produzidos diretamente no site chegam à aba Resultado sem envio ao SADE.
  chrome.runtime.onMessage.addListener((m,sender,respond)=>{
    if(m?.type!=='KB190_SITE_RESULT_TO_UI'||sender.id!==chrome.runtime.id)return false;
@@ -172,7 +227,7 @@
  $('#kb190Options').addEventListener('click',options);
  $('#kb190Check')?.addEventListener('click',async()=>{
    $('#kb190State').textContent='Verificando sessão na Base 190…';
-   try{const x=await send('KB190_STATUS');$('#kb190State').textContent='● Conectado automaticamente: '+x.user+'.';}
+   try{await refreshAuthorization(true);}
    catch(e){$('#kb190State').textContent='Não conectado: '+e.message;}
  });
  $('#kb190Close').addEventListener('click',close);
@@ -180,7 +235,7 @@
    if(busy)return;
    const text=$('#kb190Input').value;
    if(text.trim().length<3||text.length>8000){notify('Relato inválido. Use de 3 a 8.000 caracteres.');return;}
-   if(!window.confirm('Enviar o texto mostrado à Base 190 online? Confirme que usa dados fictícios ou tem autorização institucional.'))return;
+   if(!await refreshAuthorization(true)){notify('Abra a Base 190 e clique em Autorizar conexão remota antes de enviar.');return;}
    busy=true;$('#kb190Run').disabled=true;notify('Enviando para análise autenticada…');
    try{const result=await send('KB190_ANALYZE',{confirmed:true,text});output(result);notify('Sugestão recebida. Confirme o enquadramento e o texto antes de qualquer uso.');}
    catch(e){notify('Falha: '+e.message);}
@@ -189,17 +244,16 @@
  const toolbar=$('.toolbar'),quick=toolbar?.querySelector('#quick');
  const button=document.createElement('button');button.type='button';button.id='kb190Action';button.textContent='🧠 Base 190';button.title='Conexão automática com a Base 190 autenticada';
  button.addEventListener('click',open);
+ const tag=document.createElement('span');tag.id='kb190AutoState';tag.className='kb190AutoTag';
+ tag.dataset.state='off';tag.textContent='○ Aguardando autorização';
  const latest=document.createElement('button');latest.type='button';latest.id='kb190OpenLast';latest.textContent='📋 Resultado';
  latest.title='Reabrir resultado da última análise nesta aba';latest.hidden=true;
  latest.addEventListener('click',()=>{
    modal.hidden=false;latest.textContent='📋 Resultado';
    if(lastData)output(lastData);else setTab('result');
  });
- if(quick)quick.after(button,latest);else toolbar?.append(button,latest);
- // Status inicial, somente sessão: NÃO envia textos ou campos automaticamente.
- send('KB190_STATUS').then(x=>{
-   if($('#kb190State'))$('#kb190State').textContent='● Conectado automaticamente: '+x.user+'.';
- }).catch(e=>{
-   if($('#kb190State'))$('#kb190State').textContent='○ Abra a Base 190 e faça login: '+e.message;
- });
+ if(quick)quick.after(button,latest,tag);else toolbar?.append(button,latest,tag);
+ // Nenhum relato é lido/transmitido antes da autorização persistida na aba da Base.
+ void refreshAuthorization(true);
+ setInterval(()=>{void pollRelato();},1700);
 })();
