@@ -38,7 +38,7 @@ const bindingsCode = fs.readFileSync('bindings.js', 'utf8');
 test('1. Manifest V3: versão 5.8.0 e estrutura válida', () => {
   const manifest = JSON.parse(manifestCode);
   assert.strictEqual(manifest.manifest_version, 3, 'Deve ser Manifest V3');
-  assert.strictEqual(manifest.version, '5.11.0', 'Versão de teste automática deve ser 5.11.0');
+  assert.strictEqual(manifest.version, '5.12.0', 'Versão de teste com chat e autorização remota deve ser 5.12.0');
   assert.ok(manifest.permissions.includes('activeTab'), 'Permissão activeTab');
   assert.ok(manifest.permissions.includes('scripting'), 'Permissão scripting');
   assert.ok(manifest.permissions.includes('storage'), 'Permissão storage');
