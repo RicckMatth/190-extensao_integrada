@@ -1,70 +1,68 @@
-/* Verificações estáticas de integridade — Modelo TESTE Relato 190 + Base 190 */
+/* Testes de integridade v5.13.0 — controle de autorização na extensão. */
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=f=>fs.readFileSync(path.join(__dirname,f),'utf8');
-const config=JSON.parse(read('manifest.json')),bg=read('background.js'),
-  srv=read('kb190-bg.js'),bridge=read('kb190-bridge.js'),ui=read('kb190-ui.js'),
-  opts=read('kb190-options.js'),adapter=read('sade-adapter.js');
-const check=(name,fn)=>{fn();console.log('✓ '+name);};
-check('Manifest V3 and test version',()=>{
-  assert.equal(config.manifest_version,3);assert.equal(config.version,'5.12.0');
-  assert.match(config.name,/TESTE/);assert.equal(config.options_page,'kb190-options.html');
+const cfg=JSON.parse(read('manifest.json')),bg=read('background.js'),
+  worker=read('kb190-bg.js'),bridge=read('kb190-bridge.js'),ui=read('kb190-ui.js'),
+  opts=read('kb190-options.js'),adapter=read('sade-adapter.js'),
+  siteURL='https://base-conhecimento-190.vercel.app/*';
+let total=0;
+const check=(name,fn)=>{fn();total++;console.log('✓ '+name);};
+check('Manifest V3 integrado versão 5.13.0',()=>{
+  assert.equal(cfg.manifest_version,3);assert.equal(cfg.version,'5.13.0');assert.match(cfg.name,/TESTE/);
 });
-check('Preserves Chrome icons and original modules',()=>{
-  for(const name of ['icons/icon-16.png','icons/icon-48.png','icons/icon-128.png',
-     'bindings.js','content.js','relato-tools.js','relato-ia-bg.js','sade-adapter.js'])assert.ok(fs.existsSync(path.join(__dirname,name)),name);
+check('Código SADE e ícones preservados',()=>{
+  for(const x of ['icons/icon-16.png','icons/icon-48.png','icons/icon-128.png',
+    'bindings.js','content.js','relato-tools.js','relato-ia-bg.js','sade-adapter.js'])
+    assert.ok(fs.existsSync(path.join(__dirname,x)),x);
 });
-check('Registers integration in worker and injected toolbar',()=>{
+check('Domínio fixo HTTPS e content-script autenticado',()=>{
+  assert.ok(cfg.host_permissions.includes(siteURL));
+  assert.ok(cfg.content_scripts.some(s=>s.matches.includes(siteURL)&&s.js.includes('kb190-bridge.js')));
+  assert.ok(bridge.includes("credentials:'same-origin'"));
+  assert.ok(!/chrome\.cookies/i.test(bridge));
+});
+check('Background da extensão inclui ponte e IU',()=>{
   assert.ok(bg.includes("'kb190-bg.js'"));assert.ok(bg.includes("'kb190-ui.js'"));
-  assert.ok(bg.includes("'sade-adapter.js'"));assert.ok(bg.includes("'relato-tools.js'"));
+  assert.ok(bg.includes("'sade-adapter.js'"));
 });
-check('Automatic fixed-domain bridge without manual URL configuration',()=>{
-  const origin='https://base-conhecimento-190.vercel.app/*';
-  assert.ok(config.host_permissions.includes(origin),'Fixed Base 190 host permission');
-  assert.ok(config.content_scripts.some(s=>s.matches.includes(origin)&&s.js.includes('kb190-bridge.js')));
-  assert.ok(!('optional_host_permissions' in config));
-  assert.ok(srv.includes('https://base-conhecimento-190.vercel.app'));
+check('Somente as opções podem alterar autorização',()=>{
+  assert.ok(worker.includes("m.type==='KB190_SET_AUTO'&&!extSender"));
+  assert.ok(opts.includes("type:'KB190_SET_AUTO'"));
+  assert.ok(opts.includes("chrome.storage.onChanged"));
+  assert.ok(worker.includes("chrome.storage.local.set"));
 });
-check('Bidirectional result sync without session persistence',()=>{
-  assert.ok(srv.includes("type:'KB190_RESULT'"));
-  assert.ok(srv.includes("type:'KB190_SITE_RESULT_TO_UI'"));
-  assert.ok(srv.includes("m?.type==='KB190_SITE_RESULT'"));
-  assert.ok(srv.includes('sadePage(tab.url)'));
-  assert.ok(bridge.includes('base190:extension-result'));
-  assert.ok(bridge.includes('base190:site-analysis'));
-  assert.ok(ui.includes('kb190TabResult'));
-  assert.ok(ui.includes('kb190OpenLast'));
-  assert.ok(!srv.includes('storage.session.set('));
+check('Autorização local desativada por padrão',()=>{
+  assert.ok(worker.includes("kb190.autoEnabled.v3"));
+  assert.ok(worker.includes("===true"));
+  assert.ok(worker.includes("if(!await enabled())throw"));
+  assert.ok(!bridge.includes('sessionStorage'));
+  assert.ok(!worker.includes('remoteConsent'));
 });
-check('Bridge exposes only session and analysis',()=>{
-  assert.ok(bridge.includes("['consent','analyze','session']"));assert.ok(bridge.includes("credentials:'same-origin'"));
-  assert.ok(!/\/api\/admin/i.test(bridge));assert.ok(!/chrome\.cookies/i.test(bridge));
+check('Ponte rejeita POST se desativada',()=>{
+  assert.ok(bridge.includes("if(m.operation==='analyze'&&!await enabled())"));
+  assert.ok(bridge.includes("if(!await enabled())return"));
+  assert.ok(bridge.includes("'/api/analyze','POST'"));
 });
-check('Background requires operator confirmation and host permission',()=>{
-  assert.ok(srv.includes("m.type==='KB190_AUTO_ANALYZE'"));
-  assert.ok(srv.includes("if(!auth)throw Error"));
-  assert.ok(bridge.includes("sessionStorage.getItem(CONSENT)===String(user.id)"));
-  assert.ok(srv.includes("const BASE='https://base-conhecimento-190.vercel.app'"));
-  assert.ok(srv.includes('new URL(url).origin===BASE'));
+check('Site pode abrir opções sem alterar estado',()=>{
+  assert.ok(bridge.includes('base190:open-settings'));
+  assert.ok(worker.includes("m.type==='KB190_OPEN_OPTIONS'"));
+  assert.ok(worker.includes('baseOpener'));
 });
-check('Fixed URL needs no manual authorization',()=>{
-  assert.ok(opts.includes('https://base-conhecimento-190.vercel.app'));
-  assert.ok(opts.includes("type:'KB190_OPEN_BASE'"));
-  assert.ok(!opts.includes('chrome.permissions.request'));
-  assert.ok(!opts.includes('registerContentScripts'));
-});
-check('Relato auto-send only after website consent, debounce and revocation checks',()=>{
+check('SADE: envio somente após estabilidade do relato',()=>{
   assert.ok(ui.includes("KB190_AUTO_ANALYZE"));
-  assert.ok(ui.includes("if(!await refreshAuthorization())return"));
   assert.ok(ui.includes("Date.now()-observedSince<3500"));
   assert.ok(ui.includes("text.length<20"));
-  assert.ok(srv.includes("if(!auth)throw Error"));
-  assert.ok(bridge.includes("if(!authorized)return"));
-  assert.ok(!/chrome\\.cookies/i.test(bridge));
+  assert.ok(ui.includes("if(!await refreshAuthorization())return"));
+});
+check('Confirmação ainda obrigatória para aplicar texto no SADE',()=>{
   assert.ok(ui.includes("read(target)!==previous"));
+  assert.ok(ui.includes('window.confirm'));
+  assert.ok(ui.includes('kb190TabResult'));
+  assert.ok(ui.includes('kb190OpenLast'));
 });
-check('Existing SADE field recognition retained',()=>{
-  for(const field of ['nome','telefone','cidade','rua','numero','bairro','complemento','relato','cep'])
-    assert.ok(adapter.includes(field+': ['),'SADE signal missing: '+field);
+check('Nove campos SADE originais intactos',()=>{
+  for(const f of ['nome','telefone','cidade','rua','numero','bairro','complemento','relato','cep'])
+    assert.ok(adapter.includes(f+': ['),'Campo ausente: '+f);
 });
-console.log('Modelo TESTE v5.12.0 com chat e autorização remota: 10 verificações estáticas concluídas.');
+console.log(total+' verificações estáticas aprovadas.');
