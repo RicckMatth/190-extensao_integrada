@@ -42,8 +42,8 @@ check('Bridge exposes only session and analysis',()=>{
 });
 check('Background requires operator confirmation and host permission',()=>{
   assert.ok(srv.includes("m.confirmed!==true"));
-  assert.ok(srv.includes('chrome.permissions.contains'));
-  assert.ok(srv.includes("new URL(t.url).origin===origin"));
+  assert.ok(srv.includes("const BASE='https://base-conhecimento-190.vercel.app'"));
+  assert.ok(srv.includes('new URL(url).origin===BASE'));
 });
 check('Fixed URL needs no manual authorization',()=>{
   assert.ok(opts.includes('https://base-conhecimento-190.vercel.app'));
