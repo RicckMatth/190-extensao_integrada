@@ -1,0 +1,24 @@
+name: Teste de integridade - extensão integrada
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  static-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          for f in background.js kb190-bg.js kb190-bridge.js kb190-options.js kb190-ui.js bindings.js content.js sade-adapter.js relato-tools.js relato-ia-bg.js; do node --check "$f"; done
+      - name: Integrated extension static test
+        run: node test_integracao.js
+      - name: Original SADE regression tests
+        run: node test_sade_suite.js
