@@ -1,104 +1,95 @@
-/* Integração automática Relato 190 ↔ Base 190 v5.11.0 (MODELO TESTE).
- * Host fixo, leitura de sessão do site, nunca leitura/armazenamento de cookies ou senhas.
- * Envio do relato exige confirmação do operador. Resultados apenas em memória do navegador.
+/* Relato 190 → Base 190 v5.12.0 — TESTE integrado.
+ * Autorizar conexão remota é feito NA BASE, por sessão/aba.
+ * Sem token persistente, sem copiar cookies; conteúdo só via HTTPS same-origin.
  */
-(()=>{
- 'use strict';
+(()=>{'use strict';
  const BASE='https://base-conhecimento-190.vercel.app';
- const ALLOWED=new Set(['KB190_STATUS','KB190_ANALYZE','KB190_OPEN_BASE','KB190_OPEN_OPTIONS']);
+ const ALLOWED=new Set(['KB190_STATUS','KB190_ANALYZE','KB190_AUTO_ANALYZE','KB190_OPEN_BASE','KB190_OPEN_OPTIONS']);
+ const validPage=url=>{try{return new URL(url).origin===BASE;}catch{return false;}};
+ const sadePage=url=>{try{const p=new URL(url).pathname.toLowerCase();return p.includes('/syspm-web/public/')||/(?:teste[-_]sade|simulador|teste-atendimento)/.test(p);}catch{return false;}};
  const extensionURL=chrome.runtime.getURL('');
- const validPage=(url)=>{try{return new URL(url).origin===BASE;}catch{return false;}};
- const sadePage=url=>{
-   try{
-     const path=new URL(url).pathname;
-     return path.toLowerCase().includes('/syspm-web/public/')||/(?:teste[-_]sade|simulador|teste-atendimento)/i.test(path);
-   }catch{return false;}
- };
- async function getBaseTabs(){
-   return (await chrome.tabs.query({})).filter(t=>Number.isInteger(t.id)&&validPage(t.url));
- }
+ const baseTabs=async()=>((await chrome.tabs.query({})).filter(t=>Number.isInteger(t.id)&&validPage(t.url)));
  async function openBase(){
-   const tabs=await getBaseTabs();
-   if(tabs.length){
-     await chrome.tabs.update(tabs[0].id,{active:true});
-     if(Number.isInteger(tabs[0].windowId))await chrome.windows.update(tabs[0].windowId,{focused:true});
-   }else await chrome.tabs.create({url:BASE+'/',active:true});
-   return {opened:true,origin:BASE};
+   const tabs=await baseTabs();
+   if(tabs.length){await chrome.tabs.update(tabs[0].id,{active:true});if(Number.isInteger(tabs[0].windowId))await chrome.windows.update(tabs[0].windowId,{focused:true});}
+   else await chrome.tabs.create({url:BASE+'/',active:true});
+   return {opened:true};
  }
- async function invoke(operation,text){
-   const tabs=await getBaseTabs();
-   if(!tabs.length)throw Error('Abra a Base 190 e faça login. A conexão será reconhecida automaticamente.');
-   let last='A aba da Base 190 não respondeu. Recarregue o site e tente novamente.';
+ async function askTab(tab,operation,text){
+   const r=await chrome.tabs.sendMessage(tab.id,{type:'KB190_BRIDGE',operation,...(operation==='analyze'?{text}:{})});
+   if(!r?.ok)throw Error(r?.error||'A Base 190 não respondeu.');
+   return r.data;
+ }
+ async function authorized(){
+   const tabs=await baseTabs();
+   if(!tabs.length)throw Error('Abra a Base 190 em outra aba e faça login.');
+   let loggedIn=null,auth=null;
    for(const tab of tabs){
      try{
-       const reply=await chrome.tabs.sendMessage(tab.id,{type:'KB190_BRIDGE',operation,...(operation==='analyze'?{text}:{})});
-       if(reply?.ok)return {data:reply.data,tabId:tab.id};
-       if(reply?.status===401||reply?.status===403){last='Sessão não autenticada. Entre na Base 190 e tente novamente.';continue;}
-       last=String(reply?.error||last).slice(0,200);
-     }catch(e){last=String(e?.message||last).slice(0,200);}
-   }
-   throw Error(last);
- }
- async function syncResult(analysis,sourceTabId){
-   // A aba que executou a análise sempre recebe primeiro; outras abas autenticadas
-   // da mesma origem também podem mostrar o resultado, sem persistir textos.
-   const tabs=await getBaseTabs();
-   const ordered=[...tabs.filter(t=>t.id===sourceTabId),...tabs.filter(t=>t.id!==sourceTabId)];
-   const data={type:'KB190_RESULT',result:analysis?.result||null,
-     disclaimer:String(analysis?.disclaimer||'').slice(0,1200),at:Date.now()};
-   let delivered=0;
-   for(const tab of ordered){
-     try{
-       const response=await chrome.tabs.sendMessage(tab.id,data);
-       if(response?.ok)delivered++;
+       const data=await askTab(tab,'consent');
+       if(data?.user)loggedIn={tab,data};
+       if(data?.authorized){auth={tab,data};break;}
      }catch{}
    }
-   return delivered;
+   return {auth,loggedIn};
+ }
+ async function check(){
+   const {auth,loggedIn}=await authorized();
+   if(!loggedIn&&!auth)throw Error('Faça login na Base 190 e recarregue a página.');
+   return {connected:true,authorized:Boolean(auth),user:(auth||loggedIn).data.user,
+     origin:BASE,role:(auth||loggedIn).data.role};
+ }
+ async function analyze(text){
+   const {auth}=await authorized();
+   if(!auth)throw Error('Acesse Integração 190 na Base e clique em Autorizar conexão remota.');
+   // O próprio content script valida a autorização novamente antes de consultar a API.
+   const data=await askTab(auth.tab,'analyze',text);
+   const r={type:'KB190_RESULT',result:data?.result||null,
+     disclaimer:String(data?.disclaimer||'').slice(0,1200),at:Date.now()};
+   // Nunca repassar dados a abas não autenticadas de outros usuários.
+   try{await chrome.tabs.sendMessage(auth.tab.id,r);}catch{}
+   return {connected:true,authorized:true,result:data?.result,disclaimer:data?.disclaimer,synchronized:true};
  }
  chrome.runtime.onMessage.addListener((m,sender,respond)=>{
    if(m?.type==='KB190_SITE_RESULT'){
      if(sender.id!==chrome.runtime.id||!Number.isInteger(sender.tab?.id)||!validPage(sender.url||sender.tab.url)){
-       respond({ok:false,error:'Origem de resultado não permitida.'});return false;
+       respond({ok:false,error:'Origem não permitida.'});return false;
      }
      (async()=>{
-       if(!m.result||typeof m.result!=='object'||!['classificacao','faq','indefinido'].includes(m.result.tipo))
-         throw Error('Resultado inválido.');
-       if(JSON.stringify(m.result).length>40000)throw Error('Resultado excedeu limite.');
-       const tabs=await chrome.tabs.query({});
+       if(!m.result||!['classificacao','faq','indefinido'].includes(m.result.tipo)||JSON.stringify(m.result).length>40000)throw Error('Resultado inválido.');
        let delivered=0;
-       for(const tab of tabs){
+       for(const tab of await chrome.tabs.query({})){
          if(!Number.isInteger(tab.id)||!sadePage(tab.url))continue;
          try{
-           const res=await chrome.tabs.sendMessage(tab.id,{type:'KB190_SITE_RESULT_TO_UI',
-             result:m.result,disclaimer:String(m.disclaimer||'').slice(0,1200)});
-           if(res?.ok)delivered++;
+           const r=await chrome.tabs.sendMessage(tab.id,{type:'KB190_SITE_RESULT_TO_UI',result:m.result,
+             disclaimer:String(m.disclaimer||'').slice(0,1200)});
+           if(r?.ok)delivered++;
          }catch{}
        }
        return {delivered};
-     })().then(x=>respond({ok:true,...x})).catch(e=>respond({ok:false,error:e.message}));
+     })().then(x=>respond({ok:true,...x})).catch(e=>respond({ok:false,error:String(e.message||e)}));
      return true;
    }
    if(!ALLOWED.has(m?.type))return false;
-   if(sender.id!==chrome.runtime.id ||
-     !(Number.isInteger(sender.tab?.id)||String(sender.url||'').startsWith(extensionURL))){
-     respond({ok:false,error:'Remetente da extensão não autorizado.'});return false;
+   const isExtension=String(sender.url||'').startsWith(extensionURL);
+   const isSadeTab=Number.isInteger(sender.tab?.id)&&sender.frameId===0&&sadePage(sender.url||sender.tab.url);
+   if(sender.id!==chrome.runtime.id || !(isExtension||isSadeTab)){
+     respond({ok:false,error:'Remetente não autorizado.'});return false;
+   }
+   if(m.type==='KB190_AUTO_ANALYZE'&&!isSadeTab){
+     respond({ok:false,error:'Análise automática permitida somente na tela SADE.'});return false;
    }
    (async()=>{
      if(m.type==='KB190_OPEN_BASE')return openBase();
      if(m.type==='KB190_OPEN_OPTIONS'){await chrome.runtime.openOptionsPage();return {opened:true};}
-     if(m.type==='KB190_STATUS'){
-       const {data}=await invoke('session');
-       return {connected:true,origin:BASE,user:data?.user?.username||'',role:data?.user?.role||''};
-     }
-     if(m.confirmed!==true)throw Error('É necessário confirmar o envio do relato.');
+     if(m.type==='KB190_STATUS')return check();
+     if(!isSadeTab)throw Error('A análise de relato está limitada à tela SADE ou ao simulador.');
      const text=String(m.text||'');
-     if(text.trim().length<3||text.length>8000)throw Error('Relato deve ter de 3 a 8.000 caracteres.');
-     const response=await invoke('analyze',text);
-     const delivered=await syncResult(response.data,response.tabId);
-     return {connected:true,result:response.data?.result,disclaimer:response.data?.disclaimer,
-       synchronized:delivered>0};
-   })().then(data=>respond({ok:true,...data}))
-      .catch(e=>respond({ok:false,error:String(e?.message||e).slice(0,350)}));
+     if(text.trim().length<3||text.length>8000)throw Error('Relato fora dos limites de 3 a 8.000 caracteres.');
+     if(m.type==='KB190_AUTO_ANALYZE'&&text.trim().length<20)throw Error('Aguarde pelo menos 20 caracteres antes da análise automática.');
+     // Sem prompt adicional: autorização explícita já foi concedida na Base e é reverificada pela ponte.
+     return analyze(text);
+   })().then(x=>respond({ok:true,...x})).catch(e=>respond({ok:false,error:String(e?.message||e).slice(0,320)}));
    return true;
  });
 })();
