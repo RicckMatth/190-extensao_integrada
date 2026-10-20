@@ -9,6 +9,9 @@
  globalThis.__kb190BridgeActive=true;
  function announce(){window.dispatchEvent(new CustomEvent('base190:extension-ready',{detail:{version:'5.13.0'}}));}
  window.addEventListener('base190:extension-discover',announce);
+ window.addEventListener('base190:open-settings',()=>{
+   chrome.runtime.sendMessage({type:'KB190_OPEN_OPTIONS'}).catch(()=>{});
+ });
  async function json(path,method='GET',value=''){
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
    try{
