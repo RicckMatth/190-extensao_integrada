@@ -7,7 +7,7 @@ const config=JSON.parse(read('manifest.json')),bg=read('background.js'),
   opts=read('kb190-options.js'),adapter=read('sade-adapter.js');
 const check=(name,fn)=>{fn();console.log('✓ '+name);};
 check('Manifest V3 and test version',()=>{
-  assert.equal(config.manifest_version,3);assert.equal(config.version,'5.11.0');
+  assert.equal(config.manifest_version,3);assert.equal(config.version,'5.12.0');
   assert.match(config.name,/TESTE/);assert.equal(config.options_page,'kb190-options.html');
 });
 check('Preserves Chrome icons and original modules',()=>{
@@ -37,11 +37,13 @@ check('Bidirectional result sync without session persistence',()=>{
   assert.ok(!srv.includes('storage.session.set('));
 });
 check('Bridge exposes only session and analysis',()=>{
-  assert.ok(bridge.includes("['session','analyze']"));assert.ok(bridge.includes("credentials:'same-origin'"));
+  assert.ok(bridge.includes("['consent','analyze','session']"));assert.ok(bridge.includes("credentials:'same-origin'"));
   assert.ok(!/\/api\/admin/i.test(bridge));assert.ok(!/chrome\.cookies/i.test(bridge));
 });
 check('Background requires operator confirmation and host permission',()=>{
-  assert.ok(srv.includes("m.confirmed!==true"));
+  assert.ok(srv.includes("m.type==='KB190_AUTO_ANALYZE'"));
+  assert.ok(srv.includes("if(!auth)throw Error"));
+  assert.ok(bridge.includes("sessionStorage.getItem(CONSENT)===String(user.id)"));
   assert.ok(srv.includes("const BASE='https://base-conhecimento-190.vercel.app'"));
   assert.ok(srv.includes('new URL(url).origin===BASE'));
 });
@@ -51,12 +53,18 @@ check('Fixed URL needs no manual authorization',()=>{
   assert.ok(!opts.includes('chrome.permissions.request'));
   assert.ok(!opts.includes('registerContentScripts'));
 });
-check('No automatic sending of relatos from DOM',()=>{
-  assert.ok(ui.includes('KB190_ANALYZE'));assert.ok(ui.includes('window.confirm'));
+check('Relato auto-send only after website consent, debounce and revocation checks',()=>{
+  assert.ok(ui.includes("KB190_AUTO_ANALYZE"));
+  assert.ok(ui.includes("if(!await refreshAuthorization())return"));
+  assert.ok(ui.includes("Date.now()-observedSince<3500"));
+  assert.ok(ui.includes("text.length<20"));
+  assert.ok(srv.includes("if(!auth)throw Error"));
+  assert.ok(bridge.includes("if(!authorized)return"));
+  assert.ok(!/chrome\\.cookies/i.test(bridge));
   assert.ok(ui.includes("read(target)!==previous"));
 });
 check('Existing SADE field recognition retained',()=>{
   for(const field of ['nome','telefone','cidade','rua','numero','bairro','complemento','relato','cep'])
     assert.ok(adapter.includes(field+': ['),'SADE signal missing: '+field);
 });
-console.log('Modelo TESTE com sincronização automática: 10 verificações estáticas concluídas.');
+console.log('Modelo TESTE v5.12.0 com chat e autorização remota: 10 verificações estáticas concluídas.');
