@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Relato 190 — Essencial + Endereços",
-  "version": "5.9.3",
-  "description": "Relato 190: SADE, sugestões de municípios do Paraná, CAPS, revisão opcional Gemini e histórico temporário protegido.",
+  "name": "Relato 190 + Base de Conhecimento — MODELO TESTE",
+  "version": "5.10.0",
+  "description": "MODELO TESTE: Relato 190 v5.9.3 com ponte de análise autenticada à Base 190 Node.js. NÃO HOMOLOGADO.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -15,7 +15,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Abrir ou fechar Relato 190 Essencial",
+    "default_title": "Relato 190 + Base de Conhecimento (TESTE)",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
@@ -34,5 +34,10 @@
     "https://*.hereapi.com/*",
     "https://*.search.hereapi.com/*",
     "https://generativelanguage.googleapis.com/*"
+  ],
+  "version_name": "5.10.0-teste-integrado.1",
+  "options_page": "kb190-options.html",
+  "optional_host_permissions": [
+    "https://*/*"
   ]
 }
