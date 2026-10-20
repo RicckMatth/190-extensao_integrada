@@ -89,7 +89,8 @@
    if(!ACTIONS.has(m?.type))return false;
    const extSender=String(sender.url||'').startsWith(EXT_URL);
    const sadeSender=Number.isInteger(sender.tab?.id)&&sender.frameId===0&&sadePage(sender.url||sender.tab.url);
-   if(!(extSender||sadeSender)){reply({ok:false,error:'Origem não autorizada.'});return false;}
+   const baseOpener=m.type==='KB190_OPEN_OPTIONS'&&Number.isInteger(sender.tab?.id)&&validBase(sender.url||sender.tab.url);
+   if(!(extSender||sadeSender||baseOpener)){reply({ok:false,error:'Origem não autorizada.'});return false;}
    if(m.type==='KB190_SET_AUTO'&&!extSender){
      reply({ok:false,error:'A autorização só pode ser alterada nas configurações da extensão.'});return false;
    }
