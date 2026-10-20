@@ -34,7 +34,7 @@
  shadow.append(css);
  const settings=$('#settingsView');
  const block=document.createElement('section');block.className='kb190Config';
- block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>A autorização da análise agora fica <b>nesta extensão</b>. Ative ou desative o envio automático aqui ou na página de Configurações. É necessário estar logado na Base 190.</p><button type="button" id="kb190Toggle">Ativar análise automática</button><button type="button" id="kb190Set">Configurações completas</button><button type="button" id="kb190Check">Atualizar conexão</button><p class="kb190State" id="kb190State" role="status">Verificando configurações…</p>';
+ block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>A autorização da análise agora fica <b>nesta extensão</b>. Ative ou desative o envio automático aqui ou na página de Configurações. É necessário estar logado na Base 190.</p><button type="button" id="kb190Toggle">Ativar / desativar nas configurações</button><button type="button" id="kb190Set">Configurações completas</button><button type="button" id="kb190Check">Atualizar conexão</button><p class="kb190State" id="kb190State" role="status">Verificando configurações…</p>';
  settings?.append(block);
  const modal=document.createElement('div');modal.className='kb190Modal';modal.hidden=true;
  modal.innerHTML='<div class="kb190Dialog" role="dialog" aria-modal="true" aria-label="Análise com Base 190">'
@@ -162,7 +162,7 @@
      tag.dataset.state=remoteAuthorized?'on':'off';
      tag.textContent=remoteAuthorized?'● Análise automática ativa':enabled?'○ Faça login na Base':'○ Análise desligada';
    }
-   if(toggle)toggle.textContent=enabled?'Desativar análise automática':'Ativar análise automática';
+   if(toggle)toggle.textContent=enabled?'Gerenciar análise automática':'Ativar análise automática';
    if($('#kb190State'))$('#kb190State').textContent=message||
      (remoteAuthorized?'● Configuração ativa e sessão autenticada.':
        enabled?'○ Envio autorizado na extensão; abra a Base 190 e faça login.':
@@ -234,16 +234,7 @@
  });
  $('#kb190Set')?.addEventListener('click',options);
  $('#kb190Options').addEventListener('click',options);
- $('#kb190Toggle')?.addEventListener('click',async()=>{
-   const button=$('#kb190Toggle');button.disabled=true;
-   try{
-     const s=await send('KB190_STATUS');
-     await send('KB190_SET_AUTO',{enabled:!s.enabled});
-     autoLastStatus=0;
-     await refreshAuthorization(true);
-   }catch(e){if($('#kb190State'))$('#kb190State').textContent='Não foi possível salvar: '+e.message;}
-   finally{button.disabled=false;}
- });
+ $('#kb190Toggle')?.addEventListener('click',options);
  chrome.storage.onChanged.addListener((changes,area)=>{
    if(area==='local'&&changes['kb190.autoEnabled.v3']){
      autoLastStatus=0;
