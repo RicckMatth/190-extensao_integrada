@@ -1,4 +1,4 @@
-/* Base 190 v5.12.0 TESTE: observação local do relato e envio somente após autorização na Base. */
+/* Base 190 v5.13.0: autoanálise controlada SOMENTE pelas configurações da extensão. */
 (()=>{
  'use strict';
  if(globalThis.__kb190TestUi)return;
@@ -34,7 +34,7 @@
  shadow.append(css);
  const settings=$('#settingsView');
  const block=document.createElement('section');block.className='kb190Config';
- block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>O relato será analisado automaticamente somente após você clicar em <b>Autorizar conexão remota</b> na Base 190. Não há senha salva e nenhum preenchimento ou envio de ocorrência automático.</p><button type="button" id="kb190Set">Abrir chat na Base 190</button><button type="button" id="kb190Check">Atualizar estado</button><p class="kb190State" id="kb190State" role="status">Verificando autorização…</p>';
+ block.innerHTML='<h3>🧠 Base 190 online — TESTE</h3><p>A autorização da análise agora fica <b>nesta extensão</b>. Ative ou desative o envio automático aqui ou na página de Configurações. É necessário estar logado na Base 190.</p><button type="button" id="kb190Toggle">Ativar / desativar nas configurações</button><button type="button" id="kb190Set">Configurações completas</button><button type="button" id="kb190Check">Atualizar conexão</button><p class="kb190State" id="kb190State" role="status">Verificando configurações…</p>';
  settings?.append(block);
  const modal=document.createElement('div');modal.className='kb190Modal';modal.hidden=true;
  modal.innerHTML='<div class="kb190Dialog" role="dialog" aria-modal="true" aria-label="Análise com Base 190">'
@@ -43,9 +43,9 @@
  +'<p id="kb190Info" role="status">Confirme antes de analisar.</p>'
  +'<label for="kb190Input">Relato a analisar (revise e remova dados pessoais)</label>'
  +'<textarea id="kb190Input" maxlength="8000" placeholder="Digite um caso fictício ou revise o relato do simulador."></textarea>'
- +'<div class="kb190Warning">Sistema experimental, sem homologação institucional. Nunca utilize classificação automática como decisão definitiva. O botão de análise envia o texto à Base 190 online, após sua autorização.</div>'
+ +'<div class="kb190Warning">Protótipo não homologado. A autorização é definida nas Configurações desta extensão. A análise exige login na Base 190; revise classificação e informações antes de utilizá-las.</div>'
  +'<div class="kb190Buttons"><button class="secondary" id="kb190Close" type="button">Fechar</button>'
- +'<button class="secondary" id="kb190Options" type="button">Abrir Base 190</button>'
+ +'<button class="secondary" id="kb190Options" type="button">Configurações da extensão</button>'
  +'<button id="kb190Run" type="button">Confirmar e analisar</button></div>'
  +'<section class="kb190Output" id="kb190Result" hidden></section>'
  +'</div>';
@@ -93,7 +93,7 @@
    if(busy)return;
    modal.hidden=false;$('#kb190Result').replaceChildren();setTab('compose');
    target=null;previous='';suggestion='';$('#kb190Input').value='';
-   notify('Análises são liberadas pelo botão Autorizar conexão remota na Base 190. Sem permissão extra aqui.');
+   notify('Ative a análise automática nas Configurações da extensão. É necessário estar logado na Base 190.');
    try{
      target=await findRelato();previous=read(target);
      if(target)$('#kb190Input').value=previous.slice(0,8000);
@@ -154,23 +154,32 @@
    }
    if(data?.disclaimer)add(box,'p',data.disclaimer);
  }
- const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_BASE'}).catch(()=>{});
- const setAutoState=(authorized,message)=>{
-   remoteAuthorized=authorized===true;
-   const tag=$('#kb190AutoState');
-   if(tag){tag.dataset.state=remoteAuthorized?'on':'off';
-     tag.textContent=remoteAuthorized?'● Análise automática ativa':'○ Aguardando autorização';}
+ const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_OPTIONS'}).catch(()=>{});
+ const setAutoState=(enabled,connected,message)=>{
+   remoteAuthorized=enabled===true&&connected===true;
+   const tag=$('#kb190AutoState'),toggle=$('#kb190Toggle');
+   if(tag){
+     tag.dataset.state=remoteAuthorized?'on':'off';
+     tag.textContent=remoteAuthorized?'● Análise automática ativa':enabled?'○ Faça login na Base':'○ Análise desligada';
+   }
+   if(toggle)toggle.textContent=enabled?'Gerenciar análise automática':'Ativar análise automática';
    if($('#kb190State'))$('#kb190State').textContent=message||
-     (remoteAuthorized?'● Conexão remota autorizada pela Base 190.':'○ Abra a Base 190 e clique em Autorizar conexão remota.');
+     (remoteAuthorized?'● Configuração ativa e sessão autenticada.':
+       enabled?'○ Envio autorizado na extensão; abra a Base 190 e faça login.':
+       '○ Análise desativada nesta extensão.');
  };
  async function refreshAuthorization(force=false){
    const now=Date.now();
-   if(!force&&now-autoLastStatus<10000)return remoteAuthorized;
+   if(!force&&now-autoLastStatus<4000)return remoteAuthorized;
    autoLastStatus=now;
    try{
      const status=await send('KB190_STATUS');
-     setAutoState(status.authorized,'● '+status.user+(status.authorized?' · transmissão autorizada':' · aguardando autorização no site'));
-   }catch(e){setAutoState(false,'○ '+e.message);}
+     const enabled=status.enabled===true,connected=status.connected===true;
+     setAutoState(enabled,connected,
+       enabled?(connected?'● Análise ativada nesta extensão · '+status.user+'.':
+         '○ Análise ativada · '+(status.reason||'faça login na Base 190.')):
+         '○ Análise automática desativada. Clique em Ativar análise automática.');
+   }catch(e){setAutoState(false,false,'○ '+e.message);}
    return remoteAuthorized;
  }
  async function pollRelato(){
@@ -197,7 +206,7 @@
      }catch(e){
        autoRetryAt=Date.now()+15000;
        if($('#kb190State'))$('#kb190State').textContent='Análise não realizada: '+e.message;
-       if(/autorize|autorização|sessão|login|entre na base/i.test(e.message))setAutoState(false);
+       if(/desativada|configurações|sessão|login|entre na base/i.test(e.message))void refreshAuthorization(true);
      }finally{autoBusy=false;}
    }catch(e){
      autoRetryAt=Date.now()+15000;
@@ -225,6 +234,13 @@
  });
  $('#kb190Set')?.addEventListener('click',options);
  $('#kb190Options').addEventListener('click',options);
+ $('#kb190Toggle')?.addEventListener('click',options);
+ chrome.storage.onChanged.addListener((changes,area)=>{
+   if(area==='local'&&changes['kb190.autoEnabled.v3']){
+     autoLastStatus=0;
+     void refreshAuthorization(true);
+   }
+ });
  $('#kb190Check')?.addEventListener('click',async()=>{
    $('#kb190State').textContent='Verificando sessão na Base 190…';
    try{await refreshAuthorization(true);}
@@ -235,9 +251,12 @@
    if(busy)return;
    const text=$('#kb190Input').value;
    if(text.trim().length<3||text.length>8000){notify('Relato inválido. Use de 3 a 8.000 caracteres.');return;}
-   if(!await refreshAuthorization(true)){notify('Abra a Base 190 e clique em Autorizar conexão remota antes de enviar.');return;}
+   if(!await refreshAuthorization(true)){
+     notify('Ative a análise nas Configurações desta extensão e mantenha o login na Base 190.');
+     return;
+   }
    busy=true;$('#kb190Run').disabled=true;notify('Enviando para análise autenticada…');
-   try{const result=await send('KB190_ANALYZE',{confirmed:true,text});output(result);notify('Sugestão recebida. Confirme o enquadramento e o texto antes de qualquer uso.');}
+   try{const result=await send('KB190_ANALYZE',{text});output(result);notify('Sugestão recebida. Confirme o enquadramento e o texto antes de qualquer uso.');}
    catch(e){notify('Falha: '+e.message);}
    finally{busy=false;$('#kb190Run').disabled=false;}
  });
@@ -245,7 +264,7 @@
  const button=document.createElement('button');button.type='button';button.id='kb190Action';button.textContent='🧠 Base 190';button.title='Conexão automática com a Base 190 autenticada';
  button.addEventListener('click',open);
  const tag=document.createElement('span');tag.id='kb190AutoState';tag.className='kb190AutoTag';
- tag.dataset.state='off';tag.textContent='○ Aguardando autorização';
+ tag.dataset.state='off';tag.textContent='○ Análise desativada';
  const latest=document.createElement('button');latest.type='button';latest.id='kb190OpenLast';latest.textContent='📋 Resultado';
  latest.title='Reabrir resultado da última análise nesta aba';latest.hidden=true;
  latest.addEventListener('click',()=>{

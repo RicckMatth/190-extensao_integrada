@@ -1,98 +1,127 @@
-/* Testes de segurança do fluxo consentimento → análise.
- * Node VM simula APIs Chrome; não é teste de navegador real. */
+/* v5.13.0: testes dinâmicos simulados de autorização EXCLUSIVA da extensão.
+ * Mock das APIs MV3 do Chrome e da sessão da Base 190, sem rede real.
+ */
 'use strict';
-const assert=require('node:assert/strict');
-const fs=require('node:fs'),vm=require('node:vm');
-const read=p=>fs.readFileSync(p,'utf8');
-const runMessage=(callback,message,sender)=>new Promise((resolve,reject)=>{
- const timeout=setTimeout(()=>reject(Error('Resposta assíncrona não recebida: '+message.type)),5000);
- let finished=false;
- const respond=v=>{if(!finished){finished=true;clearTimeout(timeout);resolve(v);}};
- try{callback(message,sender,respond);}catch(e){clearTimeout(timeout);reject(e);}
-});
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const code=name=>fs.readFileSync(name,'utf8');
+const KEY='kb190.autoEnabled.v3';
+function call(listener,msg,sender){
+ return new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(Error('Sem resposta: '+msg.type)),4000);
+   try{listener(msg,sender,r=>{clearTimeout(timer);resolve(r);});}
+   catch(e){clearTimeout(timer);reject(e);}
+ });
+}
 async function workerTest(){
- const listeners=[],base='https://base-conhecimento-190.vercel.app/';
- const sade='http://localhost:8099/teste-sade.html';
- let authorized=false,analyzed=0,pushed=0;
+ let logged=true,analyzes=0,siteDeliveries=0;const listeners=[],store=new Map();
+ const baseUrl='https://base-conhecimento-190.vercel.app/';
+ const sadeUrl='http://localhost:8080/teste-sade.html';
  const chrome={
-   runtime:{id:'ext-test',getURL:()=> 'chrome-extension://ext-test/',onMessage:{addListener:l=>listeners.push(l)}},
+   runtime:{id:'abc',getURL:()=> 'chrome-extension://abc/',onMessage:{addListener:fn=>listeners.push(fn)},openOptionsPage:async()=>({})},
+   storage:{local:{
+     get:async k=>({[k]:store.get(k)}),
+     set:async values=>{Object.entries(values).forEach(([k,v])=>store.set(k,v));}
+   }},
    tabs:{
-     query:async()=>[{id:7,url:base,windowId:1},{id:9,url:sade,windowId:1}],
+     query:async()=>[{id:7,url:baseUrl,windowId:1},{id:9,url:sadeUrl,windowId:1}],
      sendMessage:async(id,m)=>{
-       if(id===7&&m.type==='KB190_BRIDGE'&&m.operation==='consent')
-         return {ok:true,data:{authorized,user:'teste',role:'user'}};
+       if(id===7&&m.type==='KB190_BRIDGE'&&m.operation==='session')
+         return logged?{ok:true,data:{user:{id:'one',username:'example',role:'user',mustChangePassword:false}}}:
+           {ok:false,status:401,error:'Faça login na Base.'};
        if(id===7&&m.type==='KB190_BRIDGE'&&m.operation==='analyze'){
-         analyzed++;
-         assert.equal(m.text,'BARULHO EXCESSIVO EM LOCAL FICTICIO');
-         return {ok:true,data:{result:{tipo:'classificacao',principal:{officialNature:'Perturbação',code:'TESTE'}}}};
+         analyzes++;assert.equal(m.text,'RELATO DE TESTE: BARULHO EXTENSO NA RUA');
+         return {ok:true,data:{result:{tipo:'classificacao',principal:{officialNature:'PERTURBAÇÃO'}},disclaimer:'Teste'}};
        }
-       if(id===7&&m.type==='KB190_RESULT'){pushed++;return {ok:true};}
-       return {ok:true};
-     },
-     update:async()=>({}),create:async()=>({id:70})
+       if(id===7&&m.type==='KB190_RESULT')return {ok:true};
+       if(id===9&&m.type==='KB190_SITE_RESULT_TO_UI'){siteDeliveries++;return {ok:true};}
+       return {ok:false,error:'Mensagem não reconhecida.'};
+     },update:async()=>({}),create:async()=>({})
    },windows:{update:async()=>({})}
  };
- vm.runInNewContext(read('kb190-bg.js'),{chrome,URL,console,Date,Set,Number,String,Promise,JSON,Error}, {filename:'kb190-bg.js'});
+ vm.runInNewContext(code('kb190-bg.js'),{chrome,URL,console,Set,Number,String,Promise,JSON,Error,Date},
+   {filename:'kb190-bg.js'});
  assert.equal(listeners.length,1);
- const sender={id:'ext-test',tab:{id:9,url:sade},url:sade,frameId:0};
- const example='BARULHO EXCESSIVO EM LOCAL FICTICIO';
- const status=await runMessage(listeners[0],{type:'KB190_STATUS'},sender);
- assert.equal(status.ok,true);assert.equal(status.authorized,false);
- let r=await runMessage(listeners[0],{type:'KB190_AUTO_ANALYZE',text:example},sender);
- assert.equal(r.ok,false);assert.match(r.error,/Autorizar conexão remota/);assert.equal(analyzed,0);
- authorized=true;
- r=await runMessage(listeners[0],{type:'KB190_AUTO_ANALYZE',text:example},sender);
- assert.equal(r.ok,true);assert.equal(analyzed,1);assert.equal(pushed,1);
- authorized=false;
- r=await runMessage(listeners[0],{type:'KB190_AUTO_ANALYZE',text:example},sender);
- assert.equal(r.ok,false);assert.equal(analyzed,1);
- r=await runMessage(listeners[0],{type:'KB190_AUTO_ANALYZE',text:example},
-   {id:'ext-test',tab:{id:33,url:'https://example.org/'},url:'https://example.org/',frameId:0});
- assert.equal(r.ok,false);assert.equal(analyzed,1);
- console.log('✓ Worker: autorização, revogação, remetente e entrega ao chat');
+ const listener=listeners[0];
+ const sade={id:'abc',tab:{id:9,url:sadeUrl},frameId:0,url:sadeUrl};
+ const settings={id:'abc',url:'chrome-extension://abc/kb190-options.html'};
+ const fake={id:'abc',url:'https://untrusted.test/simulador'};
+ const text='RELATO DE TESTE: BARULHO EXTENSO NA RUA';
+ let r=await call(listener,{type:'KB190_STATUS'},sade);
+ assert.equal(r.ok,true);assert.equal(r.connected,true);assert.equal(r.enabled,false);
+ r=await call(listener,{type:'KB190_AUTO_ANALYZE',text},sade);
+ assert.equal(r.ok,false);assert.match(r.error,/Configurações da extensão/i);assert.equal(analyzes,0);
+ r=await call(listener,{type:'KB190_SET_AUTO',enabled:true},sade);
+ assert.equal(r.ok,false);assert.equal(store.get(KEY),undefined);
+ r=await call(listener,{type:'KB190_SET_AUTO',enabled:true},fake);
+ assert.equal(r.ok,false);
+ r=await call(listener,{type:'KB190_SET_AUTO',enabled:true},settings);
+ assert.equal(r.ok,true);assert.equal(store.get(KEY),true);
+ r=await call(listener,{type:'KB190_AUTO_ANALYZE',text},sade);
+ assert.equal(r.ok,true);assert.equal(analyzes,1);
+ const baseSender={id:'abc',tab:{id:7,url:baseUrl},url:baseUrl};
+ const result={tipo:'classificacao',principal:{officialNature:'TESTE'}};
+ r=await call(listener,{type:'KB190_SITE_RESULT',result},baseSender);
+ assert.equal(r.ok,true);assert.equal(siteDeliveries,1);
+ r=await call(listener,{type:'KB190_SET_AUTO',enabled:false},settings);
+ assert.equal(r.ok,true);assert.equal(store.get(KEY),false);
+ r=await call(listener,{type:'KB190_AUTO_ANALYZE',text},sade);
+ assert.equal(r.ok,false);assert.equal(analyzes,1);
+ r=await call(listener,{type:'KB190_SITE_RESULT',result},baseSender);
+ assert.equal(r.ok,true);assert.equal(siteDeliveries,1);
+ r=await call(listener,{type:'KB190_SET_AUTO',enabled:true},settings);
+ assert.equal(r.ok,true);
+ logged=false;
+ r=await call(listener,{type:'KB190_AUTO_ANALYZE',text},sade);
+ assert.equal(r.ok,false);assert.equal(analyzes,1);
+ console.log('✓ Worker: configurações exclusivas, liga/desliga, site resultado, sessão expirada, origem restrita.');
 }
 async function bridgeTest(){
- const listeners=[],storage=new Map(),events=[];
- let posts=0,userId='test-user',eventsSent=0;
- const base='https://base-conhecimento-190.vercel.app';
- const chrome={runtime:{id:'ext-test',onMessage:{addListener:l=>listeners.push(l)},sendMessage:async()=>{eventsSent++;return {ok:true};}}};
- const ctx={chrome,URL,Date,String,Number,JSON,Promise,Error,AbortController,setTimeout,clearTimeout,
-   location:{origin:base},sessionStorage:{getItem:k=>storage.get(k)||null},
-   CustomEvent:class{constructor(type,data){this.type=type;this.detail=data.detail;}},
-   addEventListener:(t,fn)=>events.push({t,fn}),
-   dispatchEvent:()=>{},
-   fetch:async(path,opts)=>{
-     const data=path==='/api/session'?{user:{id:userId,username:'teste',role:'user',mustChangePassword:false}}:
-       {result:{tipo:'classificacao',principal:{officialNature:'Teste'}}};
-     if(path==='/api/analyze'){posts++;assert.equal(opts.credentials,'same-origin');assert.equal(opts.method,'POST');}
-     return {ok:true,status:200,text:async()=>JSON.stringify(data)};
+ const listeners=[],handlers=new Map(),store=new Map();let login=true,posts=0,sent=0,opened=0;
+ const chrome={
+   runtime:{id:'abc',onMessage:{addListener:fn=>listeners.push(fn)},sendMessage:async m=>{
+     if(m.type==='KB190_OPEN_OPTIONS'){opened++;return {ok:true};}
+     if(m.type==='KB190_SITE_RESULT'){sent++;return {ok:true};}
+     return {ok:false};
+   }},
+   storage:{local:{get:async k=>({[k]:store.get(k)})}}
+ };
+ const ctx={
+   chrome,URL,Number,String,Date,JSON,Promise,Error,AbortController,setTimeout,clearTimeout,
+   location:{origin:'https://base-conhecimento-190.vercel.app'},
+   CustomEvent:class{constructor(type,o){this.type=type;this.detail=o.detail;}},
+   addEventListener:(type,cb)=>handlers.set(type,cb),dispatchEvent:()=>{},
+   fetch:async(path,options)=>{
+     if(path==='/api/analyze'){posts++;assert.equal(options.credentials,'same-origin');
+       assert.equal(options.method,'POST');}
+     const data=path==='/api/session'?{user:{id:'one',username:'example',role:'user',mustChangePassword:false}}:
+       {result:{tipo:'classificacao',principal:{officialNature:'TESTE'}}};
+     return {ok:login,status:login?200:401,text:async()=>JSON.stringify(login?data:{error:'Sessão expirada'})};
    }
  };
  ctx.window=ctx;ctx.top=ctx;
- vm.runInNewContext(read('kb190-bridge.js'),ctx,{filename:'kb190-bridge.js'});
+ vm.runInNewContext(code('kb190-bridge.js'),ctx,{filename:'kb190-bridge.js'});
  assert.equal(listeners.length,1);
- const sender={id:'ext-test'};
- const original='RELATO FICTICIO DE TESTE';
- const siteAnalysis=events.find(x=>x.t==='base190:site-analysis')?.fn;
- assert.ok(siteAnalysis,'Ouvinte para resultados originados na Base deve existir');
- const resultEvent={detail:{result:{tipo:'classificacao',principal:{officialNature:'Teste'}}}};
- await siteAnalysis(resultEvent);
- assert.equal(eventsSent,0,'Revogação deve bloquear Base -> SADE');
- let response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
- assert.equal(response.ok,false);assert.equal(response.status,403);assert.equal(posts,0);
- storage.set('base190.remoteConsent.v2',userId);
- await siteAnalysis(resultEvent);
- assert.equal(eventsSent,1,'Autorização ativa pode enviar resultado Base -> SADE');
- response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'consent'},sender);
- assert.equal(response.ok,true);assert.equal(response.data.authorized,true);
- response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
- assert.equal(response.ok,true);assert.equal(posts,1);
- userId='other-user';
- await siteAnalysis(resultEvent);
- assert.equal(eventsSent,1,'Troca de usuário invalida transmissão de resultados');
- response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
- assert.equal(response.ok,false);assert.equal(posts,1);
- console.log('✓ Ponte: sessão, consentimento, HTTPS, revogação bidirecional e troca de usuário');
+ const s={id:'abc'},text='BARULHO EXCESSIVO NO PÁTIO DO SIMULADOR';
+ let r=await call(listeners[0],{type:'KB190_BRIDGE',operation:'session'},s);
+ assert.equal(r.ok,true);
+ r=await call(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text},s);
+ assert.equal(r.ok,false);assert.equal(r.status,403);assert.equal(posts,0);
+ const event={detail:{result:{tipo:'classificacao',principal:{officialNature:'TESTE'}}}};
+ await handlers.get('base190:site-analysis')(event);
+ assert.equal(sent,0);
+ store.set(KEY,true);
+ r=await call(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text},s);
+ assert.equal(r.ok,true);assert.equal(posts,1);
+ await handlers.get('base190:site-analysis')(event);assert.equal(sent,1);
+ handlers.get('base190:open-settings')();await Promise.resolve();
+ assert.equal(opened,1);
+ store.set(KEY,false);
+ r=await call(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text},s);
+ assert.equal(r.ok,false);assert.equal(posts,1);
+ await handlers.get('base190:site-analysis')(event);assert.equal(sent,1);
+ store.set(KEY,true);login=false;
+ r=await call(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text},s);
+ assert.equal(r.ok,false);assert.equal(posts,1);
+ console.log('✓ Ponte HTTPS: envio sem site consent, revogação imediata, login e acesso às opções.');
 }
-(async()=>{await workerTest();await bridgeTest();console.log('Todos os testes dinâmicos simulados passaram.');})()
- .catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{await workerTest();await bridgeTest();console.log('Testes dinâmicos da v5.13.0 concluídos.');})().catch(e=>{console.error(e);process.exitCode=1;});
