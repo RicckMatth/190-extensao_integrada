@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Relato 190 — Essencial + Endereços",
+  "version": "5.9.3",
+  "description": "Relato 190: SADE, sugestões de municípios do Paraná, CAPS, revisão opcional Gemini e histórico temporário protegido.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "clipboardWrite",
+    "tabs",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Abrir ou fechar Relato 190 Essencial",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "host_permissions": [
+    "https://viacep.com.br/*",
+    "https://brasilapi.com.br/*",
+    "https://servicodados.ibge.gov.br/*",
+    "https://*.hereapi.com/*",
+    "https://*.search.hereapi.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ]
+}
