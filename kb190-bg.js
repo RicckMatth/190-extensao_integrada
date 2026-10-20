@@ -11,7 +11,7 @@
  const sadePage=url=>{
    try{
      const path=new URL(url).pathname;
-     return /\\/syspm-web\\/public\\//i.test(path)||/(?:teste[-_]sade|simulador|teste-atendimento)/i.test(path);
+     return path.toLowerCase().includes('/syspm-web/public/')||/(?:teste[-_]sade|simulador|teste-atendimento)/i.test(path);
    }catch{return false;}
  };
  async function getBaseTabs(){
