@@ -53,9 +53,9 @@ async function workerTest(){
 }
 async function bridgeTest(){
  const listeners=[],storage=new Map(),events=[];
- let posts=0,userId='test-user';
+ let posts=0,userId='test-user',eventsSent=0;
  const base='https://base-conhecimento-190.vercel.app';
- const chrome={runtime:{id:'ext-test',onMessage:{addListener:l=>listeners.push(l)},sendMessage:async()=>({ok:true})}};
+ const chrome={runtime:{id:'ext-test',onMessage:{addListener:l=>listeners.push(l)},sendMessage:async()=>{eventsSent++;return {ok:true};}}};
  const ctx={chrome,URL,Date,String,Number,JSON,Promise,Error,AbortController,setTimeout,clearTimeout,
    location:{origin:base},sessionStorage:{getItem:k=>storage.get(k)||null},
    CustomEvent:class{constructor(type,data){this.type=type;this.detail=data.detail;}},
@@ -73,17 +73,26 @@ async function bridgeTest(){
  assert.equal(listeners.length,1);
  const sender={id:'ext-test'};
  const original='RELATO FICTICIO DE TESTE';
+ const siteAnalysis=events.find(x=>x.t==='base190:site-analysis')?.fn;
+ assert.ok(siteAnalysis,'Ouvinte para resultados originados na Base deve existir');
+ const resultEvent={detail:{result:{tipo:'classificacao',principal:{officialNature:'Teste'}}}};
+ await siteAnalysis(resultEvent);
+ assert.equal(eventsSent,0,'Revogação deve bloquear Base -> SADE');
  let response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
  assert.equal(response.ok,false);assert.equal(response.status,403);assert.equal(posts,0);
  storage.set('base190.remoteConsent.v2',userId);
+ await siteAnalysis(resultEvent);
+ assert.equal(eventsSent,1,'Autorização ativa pode enviar resultado Base -> SADE');
  response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'consent'},sender);
  assert.equal(response.ok,true);assert.equal(response.data.authorized,true);
  response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
  assert.equal(response.ok,true);assert.equal(posts,1);
  userId='other-user';
+ await siteAnalysis(resultEvent);
+ assert.equal(eventsSent,1,'Troca de usuário invalida transmissão de resultados');
  response=await runMessage(listeners[0],{type:'KB190_BRIDGE',operation:'analyze',text:original},sender);
  assert.equal(response.ok,false);assert.equal(posts,1);
- console.log('✓ Ponte: sessão, consentimento por usuário, POST TLS e bloqueio por troca de usuário');
+ console.log('✓ Ponte: sessão, consentimento, HTTPS, revogação bidirecional e troca de usuário');
 }
 (async()=>{await workerTest();await bridgeTest();console.log('Todos os testes dinâmicos simulados passaram.');})()
  .catch(e=>{console.error(e);process.exitCode=1;});
