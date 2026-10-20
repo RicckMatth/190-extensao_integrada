@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Relato 190 + Base de Conhecimento — MODELO TESTE",
-  "version": "5.10.0",
-  "description": "MODELO TESTE: Relato 190 v5.9.3 com ponte de análise autenticada à Base 190 Node.js. NÃO HOMOLOGADO.",
+  "version": "5.11.0",
+  "description": "TESTE integrado: reconhecimento automático da Base 190, sincronização de resultados nos dois painéis; uso assistivo, não homologado.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -33,11 +33,21 @@
     "https://servicodados.ibge.gov.br/*",
     "https://*.hereapi.com/*",
     "https://*.search.hereapi.com/*",
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://base-conhecimento-190.vercel.app/*"
   ],
-  "version_name": "5.10.0-teste-integrado.1",
+  "version_name": "5.11.0-teste-auto.1",
   "options_page": "kb190-options.html",
-  "optional_host_permissions": [
-    "https://*/*"
+  "content_scripts": [
+    {
+      "matches": [
+        "https://base-conhecimento-190.vercel.app/*"
+      ],
+      "js": [
+        "kb190-bridge.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
   ]
 }

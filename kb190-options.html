@@ -9,11 +9,11 @@ small{color:#627189}.mark{display:inline-block;font-size:11px;font-weight:900;le
 @media(prefers-color-scheme:dark){body{background:#0a1425;color:#edf4ff}main{background:#17263e;border-color:#38465c}p,small{color:#b2c4dd}#status{background:#293c59}input{background:#162b49;color:#fff}}
 </style></head><body><main>
 <span class="mark">MODELO DE TESTE INTEGRADO • NÃO HOMOLOGADO</span>
-<h1>Conectar extensão à Base 190</h1>
-<p>Abra a Base de Conhecimento 190 no navegador, entre com um usuário autorizado e informe a URL do sistema abaixo. O Chrome pedirá permissão para acessar <strong>somente o domínio escolhido</strong>.</p>
-<label for="origin">URL HTTPS da Base 190 (sem caminho, chaves ou parâmetros)</label>
-<input id="origin" type="url" placeholder="https://exemplo.vercel.app" autocomplete="off" spellcheck="false">
-<div><button type="button" id="save">Autorizar domínio</button><button type="button" id="test" class="secondary">Testar sessão</button></div>
+<h1>Conexão automática com Base 190</h1>
+<p>O domínio oficial já está vinculado à extensão. Abra a Base 190, faça seu login no site e use a ferramenta normalmente. Não é necessário cadastrar URL ou autorizar domínios manualmente.</p>
+<label for="origin">Endereço da Base 190 (automático)</label>
+<input id="origin" type="url" value="${origin}" readonly autocomplete="off" spellcheck="false">
+<div><button type="button" id="save">Abrir Base 190</button><button type="button" id="test" class="secondary">Verificar login</button></div>
 <p id="status" role="status" aria-live="polite">Carregando configuração…</p>
-<small>Não coloque senhas, tokens ou endereços de conexão do PostgreSQL aqui. A extensão não lê senhas ou cookies. A análise de textos depende de confirmação explícita e uma sessão já autenticada na Base 190. Não usar dados reais ou sigilosos sem autorização institucional.</small>
+<small>Não é necessário inserir senha ou URL. A extensão não acessa cookies nem tokens. A análise de relatos exige sua confirmação. Não utilize dados reais sem autorização institucional.</small>
 </main><script src="kb190-options.js"></script></body></html>

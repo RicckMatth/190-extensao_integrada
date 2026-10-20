@@ -1,58 +1,76 @@
-/* Base de Conhecimento 190 — MODELO TESTE INTEGRADO 5.10.0
- * Bridge exclusiva para sessão já autenticada no site. Não copia cookies, senhas ou tokens.
- * Somente operações de consulta permitidas (session e analyze).
+/* Integração automática Relato 190 ↔ Base 190 v5.11.0 (MODELO TESTE).
+ * Host fixo, leitura de sessão do site, nunca leitura/armazenamento de cookies ou senhas.
+ * Envio do relato exige confirmação do operador. Resultados apenas em memória do navegador.
  */
 (()=>{
  'use strict';
- const KEY='kb190.test.origin.v1';
- const whitelist=new Set(['KB190_STATUS','KB190_ANALYZE','KB190_OPEN_OPTIONS']);
- function originOf(raw){
-   try{const u=new URL(String(raw||''));return u.protocol==='https:'&&!u.username&&!u.password&&!u.search&&!u.hash?u.origin:null;}
-   catch{return null;}
+ const BASE='https://base-conhecimento-190.vercel.app';
+ const ALLOWED=new Set(['KB190_STATUS','KB190_ANALYZE','KB190_OPEN_BASE','KB190_OPEN_OPTIONS']);
+ const extensionURL=chrome.runtime.getURL('');
+ const validPage=(url)=>{try{return new URL(url).origin===BASE;}catch{return false;}};
+ async function getBaseTabs(){
+   return (await chrome.tabs.query({})).filter(t=>Number.isInteger(t.id)&&validPage(t.url));
  }
- const ownOrigin=()=>chrome.runtime.getURL('');
- async function allowedOrigin(){
-   const origin=originOf((await chrome.storage.local.get(KEY))[KEY]);
-   if(!origin)throw Error('Configure a URL HTTPS da Base 190 nas opções da extensão.');
-   if(!(await chrome.permissions.contains({origins:[origin+'/*']})))throw Error('Autorize o domínio da Base 190 nas opções.');
-   return origin;
+ async function openBase(){
+   const tabs=await getBaseTabs();
+   if(tabs.length){
+     await chrome.tabs.update(tabs[0].id,{active:true});
+     if(Number.isInteger(tabs[0].windowId))await chrome.windows.update(tabs[0].windowId,{focused:true});
+   }else await chrome.tabs.create({url:BASE+'/',active:true});
+   return {opened:true,origin:BASE};
  }
- async function bridge(origin,operation,text){
-   const tabs=(await chrome.tabs.query({})).filter(t=>{
-     try{return Number.isInteger(t.id)&&new URL(t.url).origin===origin;}catch{return false;}
-   });
-   if(!tabs.length)throw Error('Abra a Base 190 em uma aba, faça login e tente novamente.');
-   let reason='Conexão indisponível. Atualize a aba da Base 190 e tente novamente.';
+ async function invoke(operation,text){
+   const tabs=await getBaseTabs();
+   if(!tabs.length)throw Error('Abra a Base 190 e faça login. A conexão será reconhecida automaticamente.');
+   let last='A aba da Base 190 não respondeu. Recarregue o site e tente novamente.';
    for(const tab of tabs){
      try{
-       const r=await chrome.tabs.sendMessage(tab.id,{type:'KB190_BRIDGE',operation,...(operation==='analyze'?{text}: {})});
-       if(r?.ok)return r.data;
-       if(r?.status===401||r?.status===403)throw Error('Sessão não autorizada ou expirada. Entre na Base 190 novamente.');
-       reason=String(r?.error||reason).slice(0,250);
-     }catch(e){
-       reason=String(e?.message||reason).slice(0,250);
-     }
+       const reply=await chrome.tabs.sendMessage(tab.id,{type:'KB190_BRIDGE',operation,...(operation==='analyze'?{text}:{})});
+       if(reply?.ok)return {data:reply.data,tabId:tab.id};
+       if(reply?.status===401||reply?.status===403){last='Sessão não autenticada. Entre na Base 190 e tente novamente.';continue;}
+       last=String(reply?.error||last).slice(0,200);
+     }catch(e){last=String(e?.message||last).slice(0,200);}
    }
-   throw Error(reason);
+   throw Error(last);
  }
- chrome.runtime.onMessage.addListener((m,sender,reply)=>{
-   if(!whitelist.has(m?.type))return false;
-   if(sender.id!==chrome.runtime.id||!(Number.isInteger(sender.tab?.id)||String(sender.url||'').startsWith(ownOrigin()))){
-     reply({ok:false,error:'Origem não autorizada.'});return false;
+ async function syncResult(analysis,sourceTabId){
+   // A aba que executou a análise sempre recebe primeiro; outras abas autenticadas
+   // da mesma origem também podem mostrar o resultado, sem persistir textos.
+   const tabs=await getBaseTabs();
+   const ordered=[...tabs.filter(t=>t.id===sourceTabId),...tabs.filter(t=>t.id!==sourceTabId)];
+   const data={type:'KB190_RESULT',result:analysis?.result||null,
+     disclaimer:String(analysis?.disclaimer||'').slice(0,1200),at:Date.now()};
+   let delivered=0;
+   for(const tab of ordered){
+     try{
+       const response=await chrome.tabs.sendMessage(tab.id,data);
+       if(response?.ok)delivered++;
+     }catch{}
+   }
+   return delivered;
+ }
+ chrome.runtime.onMessage.addListener((m,sender,respond)=>{
+   if(!ALLOWED.has(m?.type))return false;
+   if(sender.id!==chrome.runtime.id ||
+     !(Number.isInteger(sender.tab?.id)||String(sender.url||'').startsWith(extensionURL))){
+     respond({ok:false,error:'Remetente da extensão não autorizado.'});return false;
    }
    (async()=>{
+     if(m.type==='KB190_OPEN_BASE')return openBase();
      if(m.type==='KB190_OPEN_OPTIONS'){await chrome.runtime.openOptionsPage();return {opened:true};}
-     const origin=await allowedOrigin();
      if(m.type==='KB190_STATUS'){
-       const session=await bridge(origin,'session');
-       return {connected:true,origin,user:session?.user?.username||'',role:session?.user?.role||''};
+       const {data}=await invoke('session');
+       return {connected:true,origin:BASE,user:data?.user?.username||'',role:data?.user?.role||''};
      }
-     if(m.confirmed!==true)throw Error('Confirme explicitamente o envio do relato.');
+     if(m.confirmed!==true)throw Error('É necessário confirmar o envio do relato.');
      const text=String(m.text||'');
      if(text.trim().length<3||text.length>8000)throw Error('Relato deve ter de 3 a 8.000 caracteres.');
-     const analysis=await bridge(origin,'analyze',text);
-     return {connected:true,result:analysis?.result,disclaimer:analysis?.disclaimer};
-   })().then(x=>reply({ok:true,...x})).catch(e=>reply({ok:false,error:String(e?.message||e).slice(0,350)}));
+     const response=await invoke('analyze',text);
+     const delivered=await syncResult(response.data,response.tabId);
+     return {connected:true,result:response.data?.result,disclaimer:response.data?.disclaimer,
+       synchronized:delivered>0};
+   })().then(data=>respond({ok:true,...data}))
+      .catch(e=>respond({ok:false,error:String(e?.message||e).slice(0,350)}));
    return true;
  });
 })();
