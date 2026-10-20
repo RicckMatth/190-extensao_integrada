@@ -50,6 +50,28 @@
    return delivered;
  }
  chrome.runtime.onMessage.addListener((m,sender,respond)=>{
+   if(m?.type==='KB190_SITE_RESULT'){
+     if(sender.id!==chrome.runtime.id||!Number.isInteger(sender.tab?.id)||!validPage(sender.url||sender.tab.url)){
+       respond({ok:false,error:'Origem de resultado não permitida.'});return false;
+     }
+     (async()=>{
+       if(!m.result||typeof m.result!=='object'||!['classificacao','faq','indefinido'].includes(m.result.tipo))
+         throw Error('Resultado inválido.');
+       if(JSON.stringify(m.result).length>40000)throw Error('Resultado excedeu limite.');
+       const tabs=await chrome.tabs.query({});
+       let delivered=0;
+       for(const tab of tabs){
+         if(!Number.isInteger(tab.id)||validPage(tab.url))continue;
+         try{
+           const res=await chrome.tabs.sendMessage(tab.id,{type:'KB190_SITE_RESULT_TO_UI',
+             result:m.result,disclaimer:String(m.disclaimer||'').slice(0,1200)});
+           if(res?.ok)delivered++;
+         }catch{}
+       }
+       return {delivered};
+     })().then(x=>respond({ok:true,...x})).catch(e=>respond({ok:false,error:e.message}));
+     return true;
+   }
    if(!ALLOWED.has(m?.type))return false;
    if(sender.id!==chrome.runtime.id ||
      !(Number.isInteger(sender.tab?.id)||String(sender.url||'').startsWith(extensionURL))){

@@ -12,6 +12,18 @@
    window.dispatchEvent(new CustomEvent('base190:extension-ready',{detail:{version:VERSION}}));
  }
  window.addEventListener('base190:extension-discover',announce);
+ // O site também pode mostrar seu próprio resultado na aba da extensão.
+ // Evento exclusivamente visual: NÃO executa análise, NÃO escreve no SADE.
+ window.addEventListener('base190:site-analysis',e=>{
+   const data=e?.detail;
+   if(!data?.result||typeof data.result!=='object')return;
+   if(!['classificacao','faq','indefinido'].includes(data.result.tipo))return;
+   try{
+     if(JSON.stringify(data).length>40000)return;
+     chrome.runtime.sendMessage({type:'KB190_SITE_RESULT',result:data.result,
+       disclaimer:String(data.disclaimer||'').slice(0,1200)}).catch(()=>{});
+   }catch{}
+ });
  announce();
  chrome.runtime.onMessage.addListener((m,sender,respond)=>{
    if(sender.id!==chrome.runtime.id)return false;

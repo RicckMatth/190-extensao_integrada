@@ -148,6 +148,21 @@
    if(data?.disclaimer)add(box,'p',data.disclaimer);
  }
  const options=()=>chrome.runtime.sendMessage({type:'KB190_OPEN_BASE'}).catch(()=>{});
+ // Resultados produzidos diretamente no site chegam à aba Resultado sem envio ao SADE.
+ chrome.runtime.onMessage.addListener((m,sender,respond)=>{
+   if(m?.type!=='KB190_SITE_RESULT_TO_UI'||sender.id!==chrome.runtime.id)return false;
+   if(!m.result||typeof m.result!=='object')return false;
+   target=null;previous='';suggestion='';
+   const data={result:m.result,disclaimer:m.disclaimer||''};
+   lastData=data;
+   if($('#kb190OpenLast')){
+     $('#kb190OpenLast').hidden=false;
+     $('#kb190OpenLast').textContent='📋 Novo resultado';
+   }
+   if(!modal.hidden)output(data);
+   if($('#kb190State'))$('#kb190State').textContent='● Resultado sincronizado da Base 190.';
+   respond({ok:true});return false;
+ });
  $('#kb190TabCompose').addEventListener('click',()=>setTab('compose'));
  $('#kb190TabResult').addEventListener('click',()=>{
    if(lastData)output(lastData);
@@ -177,7 +192,7 @@
  const latest=document.createElement('button');latest.type='button';latest.id='kb190OpenLast';latest.textContent='📋 Resultado';
  latest.title='Reabrir resultado da última análise nesta aba';latest.hidden=true;
  latest.addEventListener('click',()=>{
-   modal.hidden=false;
+   modal.hidden=false;latest.textContent='📋 Resultado';
    if(lastData)output(lastData);else setTab('result');
  });
  if(quick)quick.after(button,latest);else toolbar?.append(button,latest);
