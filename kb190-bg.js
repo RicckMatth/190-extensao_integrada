@@ -92,8 +92,11 @@
    if(!allowed.has(m?.type))return false;
    const extSender=String(sender.url||'').startsWith(EXT);
    const sadeSender=Number.isInteger(sender.tab?.id)&&sadeUrl(sender.url||sender.tab.url);
-   const baseOpener=m.type==='KB190_OPEN_OPTIONS'&&Number.isInteger(sender.tab?.id)&&baseUrl(sender.url||sender.tab.url);
-   if(!(extSender||sadeSender||baseOpener)){
+   // Abrir as opções não altera consentimento; permite acesso pelo painel original
+   // em outros sites e simuladores HTML locais. Somente as próprias opções podem ativar envio.
+   const optionsOpener=m.type==='KB190_OPEN_OPTIONS'&&Number.isInteger(sender.tab?.id)&&
+     /^(https?:|file:)/i.test(sender.url||sender.tab.url||'');
+   if(!(extSender||sadeSender||optionsOpener)){
      reply({ok:false,error:'Remetente não autorizado.'});return false;
    }
    if(m.type==='KB190_SET_AUTO'&&!extSender){

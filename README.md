@@ -1,4 +1,4 @@
-# Relato 190 ↔ Base de Conhecimento — v5.15.0 (MODELO DE TESTE)
+# Relato 190 ↔ Base de Conhecimento — v5.15.1 (MODELO DE TESTE)
 
 > **EXPERIMENTAL · NÃO HOMOLOGADO PARA USO OPERACIONAL.** Teste somente com relatos fictícios e ambiente simulado. Dados reais de atendimento podem conter informações pessoais e sigilosas.
 
@@ -15,6 +15,18 @@
 7. Abra o SADE ou simulador compatível e digite um relato fictício.
 
 **O painel original do Relato 190 foi restaurado.** Clique no ícone da extensão para abrir a interface de associação dos campos, coleta de nome, telefone e endereço, ferramentas de mapas/CEP, preenchimento e botão **Copiar**. O painel também é restaurado após navegação nas abas previamente vinculadas, como na versão original. A análise automática é um recurso adicional e **não exige abrir o painel**.
+
+## Nova opção: Relato ao vivo / dinâmico
+
+No painel original da extensão, clique em **⚙ Configurações** → **Relato ao vivo / dinâmico** → **Configurar relato ao vivo / dinâmico**. Uma página da **própria extensão** abrirá, sem perder o painel de atendimento.
+
+1. Ative a chave **Autorizar relato ao vivo / dinâmico**.
+2. A autorização é salva em `chrome.storage.local` e **continua ativa até você desativá-la**, mesmo após fechar ou reabrir o Chrome.
+3. A extensão **testa automaticamente** se a Base 190 está aberta e autenticada no mesmo perfil do Chrome. Havendo sessão válida, mostrará **"Autorização salva e integração testada com sucesso!"**.
+4. Se o site estiver fechado ou sem login, a autorização continuará guardada; abra [a Base 190](https://base-conhecimento-190.vercel.app/), faça login e clique em **Testar integração agora**. Não precisa autorizar de novo.
+5. A partir daí, o texto principal do SADE é transmitido automaticamente, respeitando os limites e a pausa de digitação já existentes. Resultados e feedback continuam **exclusivamente no chat da Base 190**.
+
+**Sem mudanças nas demais funções:** o painel de nome, telefone, endereço, vínculos de campos, botão Copiar, mapas, perfis, preenchimento assistido e regras da ponte de análise permanecem preservados.
 
 ## Fluxo
 
@@ -51,10 +63,10 @@ O **painel** também pode ser aberto em um HTML local `file://` clicando no íco
 
 | Sintoma | Verificação |
 |---|---|
-| Não analisa automaticamente | Confirme v5.15.0, interruptor ativado e login na Base 190 |
+| Não analisa automaticamente | Confirme v5.15.1, interruptor ativado e login na Base 190 |
 | Sem resultado no chat | Mantenha a Base 190 aberta, recarregue as duas abas e teste com 20+ caracteres |
 | Campo SADE não reconhecido | Confira o adaptador e o endereço da página; a automação só envia quando encontra um campo de relato com confiança suficiente |
-| Painel não abre ao clicar no ícone | Use **v5.15.0**, recarregue a extensão e a aba; se for HTML `file://`, ative **Permitir acesso a URLs de arquivo** nos Detalhes da extensão |
+| Painel não abre ao clicar no ícone | Use **v5.15.1**, recarregue a extensão e a aba; se for HTML `file://`, ative **Permitir acesso a URLs de arquivo** nos Detalhes da extensão |
 | Texto antigo aparece | Atualize a extensão e recarregue as abas; a ponte verifica a atualidade antes de publicar |
 | Sem atividade em página de arquivo `file://` | Sirva o simulador por HTTP local; extensões Chrome precisam de permissão adicional para arquivos locais |
 

@@ -1,5 +1,5 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Relato 190 — Configurações de integração</title><style>
+<title>Relato 190 — Relato ao vivo / dinâmico</title><style>
 :root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;background:#eef3fa;color:#172b49;font:14px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;padding:36px 16px}
 main{max-width:730px;margin:auto;background:white;border:1px solid #d8e2ef;border-radius:18px;padding:clamp(20px,5vw,35px);box-shadow:0 16px 48px #17345912}
 h1{font-size:26px;margin:9px 0}h2{font-size:17px;margin:0}p{color:#60718b}strong{color:inherit}
@@ -17,18 +17,18 @@ button.secondary{background:#dbe8fa;color:#214b88}button:disabled{opacity:.55;cu
 li{margin:8px 0}.hint{font-size:12px;color:#6b788c}
 @media(prefers-color-scheme:dark){body{background:#081427;color:#ecf2fc}main{background:#15263f;border-color:#354a67}.card{background:#203552;border-color:#3c5879}p,.hint{color:#b3c5e0}button.secondary{background:#314e71;color:#eff6ff}#status{background:#213c60;color:#c6e2ff}}
 </style></head><body><main>
-<span class="eyebrow">MODELO DE TESTE · v5.13.0</span>
-<h1>Integração Relato 190</h1>
-<p>Configure a conexão diretamente nesta extensão. <b>Não é necessário clicar em autorizar na Base de Conhecimento.</b></p>
+<span class="eyebrow">MODELO DE TESTE · v5.15.1</span>
+<h1>Relato ao vivo / dinâmico</h1>
+<p>Ative a integração diretamente nesta extensão. <b>Ao ativar, a conexão é testada automaticamente se a Base 190 estiver aberta e autenticada.</b> Sem autorização adicional na página da Base.</p>
 <section class="card">
- <div class="row"><div><h2 id="toggle-heading">Análise automática de relatos</h2><p id="toggle-info">Permite enviar o texto do campo Relato do SADE à Base 190 após uma pausa na digitação.</p></div>
+ <div class="row"><div><h2 id="toggle-heading">Autorizar relato ao vivo / dinâmico</h2><p id="toggle-info">Permite enviar o texto do campo Relato do SADE à Base 190 após uma pausa na digitação.</p></div>
  <label class="switch" title="Ativar ou desativar envio automático"><input type="checkbox" id="autoEnabled" aria-labelledby="toggle-heading" aria-describedby="toggle-info"/><span class="track"></span></label></div>
- <p class="hint">Desativada inicialmente. Ao ativar, o texto do relato poderá ser enviado sem nova confirmação enquanto esta opção permanecer ativa. Não inclui os demais campos separadamente.</p>
+ <p class="hint">Ao ativar, esta autorização fica salva nas configurações da extensão, mesmo se você reiniciar o Chrome. Não será preciso autorizar cada análise. Desative aqui quando quiser interromper novos envios. Apenas o campo Relato é transmitido.</p>
 </section>
 <section class="card"><h2>Conexão com a Base 190</h2>
 <p>Endereço fixo: <strong>https://base-conhecimento-190.vercel.app/</strong></p>
 <p>O sistema continua exigindo que você esteja <strong>logado na Base 190</strong> em outra aba do mesmo perfil Chrome.</p>
-<button id="openBase" type="button">Abrir Base 190</button><button id="test" type="button" class="secondary">Testar conexão</button>
+<button id="openBase" type="button">Abrir Base 190</button><button id="test" type="button" class="secondary">Testar integração agora</button>
 <div id="status" role="status" aria-live="polite" aria-busy="true">Verificando configuração…</div></section>
 <p class="hint">Segurança: HTTPS/TLS, autenticação no servidor e autorização local em chrome.storage.local. A extensão não armazena sua senha ou cookie. Este protótipo não foi homologado para uso com informações reais ou sigilosas.</p>
 </main><script src="kb190-options.js"></script></body></html>

@@ -12,8 +12,16 @@
    try{
      const s=await request({type:'KB190_STATUS'});
      toggle.checked=s.enabled===true;
-     notice.textContent=(s.enabled?'● Análise automática ativada. ':'○ Análise automática desativada. ')+
-       (s.connected?'Conectada à Base 190 como '+s.user+'.':(s.reason||'Faça login na Base 190 em outra aba.'));
+     if(s.enabled&&s.connected){
+       notice.textContent='✓ Autorização salva e integração testada com sucesso! Base 190 conectada como '+s.user+
+         '. Os próximos relatos serão analisados automaticamente, sem novas confirmações.';
+     }else if(s.enabled){
+       notice.textContent='✓ Autorização salva no Chrome. Teste de integração pendente: '+
+         (s.reason||'abra a Base 190 e faça login no mesmo navegador.')+
+         ' Após entrar na Base, clique em Testar integração agora. Não é preciso autorizar de novo.';
+     }else{
+       notice.textContent='○ Relato ao vivo desativado. Ative a chave para salvar a autorização e testar a integração.';
+     }
    }catch(e){notice.textContent='Erro ao verificar status: '+e.message;}
    finally{notice.setAttribute('aria-busy','false');}
  }
@@ -23,8 +31,10 @@
    notice.textContent=next?'Ativando a análise automática…':'Desativando a transmissão…';
    try{
      await request({type:'KB190_SET_AUTO',enabled:next});
+     // O status consulta a sessão da aba Base 190 e confirma automaticamente a conexão.
+     await render();
    }catch(e){toggle.checked=!next;notice.textContent='Não foi possível salvar: '+e.message;}
-   finally{toggle.disabled=false;await render();}
+   finally{toggle.disabled=false;}
  });
  test.addEventListener('click',async()=>{test.disabled=true;try{await render();}finally{test.disabled=false;}});
  open.addEventListener('click',async()=>{
