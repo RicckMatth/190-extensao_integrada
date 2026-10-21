@@ -1,4 +1,4 @@
-# Relato 190 ↔ Base de Conhecimento — v5.14.0 (MODELO DE TESTE)
+# Relato 190 ↔ Base de Conhecimento — v5.15.0 (MODELO DE TESTE)
 
 > **EXPERIMENTAL · NÃO HOMOLOGADO PARA USO OPERACIONAL.** Teste somente com relatos fictícios e ambiente simulado. Dados reais de atendimento podem conter informações pessoais e sigilosas.
 
@@ -14,7 +14,7 @@
 6. Abra [a Base 190](https://base-conhecimento-190.vercel.app/) e faça login no mesmo perfil Chrome. **Não existe autorização adicional na página da Base.**
 7. Abra o SADE ou simulador compatível e digite um relato fictício.
 
-A extensão passa a trabalhar **automaticamente**, sem precisar clicar no ícone, abrir modal ou pressionar "Analisar". Ela é apenas uma ponte entre o campo de relato e o Cérebro 190 online.
+**O painel original do Relato 190 foi restaurado.** Clique no ícone da extensão para abrir a interface de associação dos campos, coleta de nome, telefone e endereço, ferramentas de mapas/CEP, preenchimento e botão **Copiar**. O painel também é restaurado após navegação nas abas previamente vinculadas, como na versão original. A análise automática é um recurso adicional e **não exige abrir o painel**.
 
 ## Fluxo
 
@@ -30,7 +30,7 @@ Chat "Integração 190" na Base 190
 Natureza sugerida, justificativa, perguntas e reformulação opcional
 ```
 
-**Todos os resultados, feedbacks e orientações aparecem somente na página da Base 190.** A extensão não apresenta resultados nem abre sua antiga janela de análise. Clicar no ícone do complemento **abre apenas as configurações**, sem exibir nenhuma janela de análise. A função de consulta pertence exclusivamente ao chat da Base 190.
+**Todos os resultados, feedbacks e orientações aparecem somente na página da Base 190.** A extensão **não apresenta resultados da Base 190** nem exibe a janela de análise integrada. Clicar no ícone do complemento abre **o painel original de atendimento** (nome, telefone, endereço, associação de campos, Copiar e ferramentas auxiliares). O resultado do Cérebro 190 continua **exclusivo ao chat do site**.
 
 O sistema espera aproximadamente 1,15 segundo sem mudança do campo antes de analisar, e limita a frequência de envio. Atualizações sucessivas do mesmo relato substituem a análise anterior no chat, em vez de criar diversas respostas. A extensão verifica o conteúdo mais recente antes de publicar o resultado, evitando sugestões desatualizadas.
 
@@ -40,21 +40,21 @@ O sistema espera aproximadamente 1,15 segundo sem mudança do campo antes de ana
 - **Autenticação apenas na Base 190**, com cookie seguro `HttpOnly`; a extensão não lê cookies, tokens ou senhas.
 - **HTTPS/TLS** criptografa os dados em trânsito, mas **não é criptografia ponta a ponta**: a Base recebe e processa o texto.
 - O serviço só recebe o texto do relato detectado. **O próprio texto pode conter dados pessoais**, então não habilite envio automático para ocorrências reais sem avaliação e autorização institucional.
-- A extensão não preenche resultados no SADE, não salva ou envia ocorrências, não escolhe despacho e não executa ações oficiais. Todas as classificações são **orientativas e não homologadas**.
+- A extensão preserva o **preenchimento assistido original dos campos do SADE** e o botão Copiar. Ela **não aplica classificações retornadas pela Base ao SADE** e não envia ocorrências, não escolhe despacho nem executa ações oficiais. As classificações são orientativas e não homologadas.
 - Revogar o interruptor bloqueia novas análises; resultados pendentes também são descartados pela ponte.
 
 ## Páginas de SADE detectadas automaticamente
 
-A versão de teste injeta a ponte em páginas com o caminho `/syspm-web/public/` e em páginas com `teste-sade` ou `teste-atendimento` servidas por `localhost` ou `127.0.0.1`. Se sua instalação do SADE utilizar domínio ou caminho diferente, será necessário adicionar uma regra específica ao manifesto **antes de habilitar o envio**. Não utilize um script genérico em todos os sites.
+O **painel** também pode ser aberto em um HTML local `file://` clicando no ícone, desde que você ative **Permitir acesso a URLs de arquivo** em `chrome://extensions` → Detalhes. Ao abrir especificamente `teste-sade.html`, `teste-atendimento.html` ou `SADE_SIMULADOR_LOCAL.html` como arquivo local, o mesmo clique ativa a ponte silenciosa. A versão de teste injeta a ponte automaticamente em páginas com o caminho `/syspm-web/public/` e em páginas com `teste-sade` ou `teste-atendimento` servidas por `localhost` ou `127.0.0.1`. Se sua instalação do SADE utilizar domínio ou caminho diferente, será necessário adicionar uma regra específica ao manifesto **antes de habilitar o envio**. Não utilize um script genérico em todos os sites.
 
 ## Diagnóstico
 
 | Sintoma | Verificação |
 |---|---|
-| Não analisa automaticamente | Confirme v5.14.0, interruptor ativado e login na Base 190 |
+| Não analisa automaticamente | Confirme v5.15.0, interruptor ativado e login na Base 190 |
 | Sem resultado no chat | Mantenha a Base 190 aberta, recarregue as duas abas e teste com 20+ caracteres |
 | Campo SADE não reconhecido | Confira o adaptador e o endereço da página; a automação só envia quando encontra um campo de relato com confiança suficiente |
-| Nada acontece ao clicar no ícone | É esperado: **não é necessário clicar para analisar** |
+| Painel não abre ao clicar no ícone | Use **v5.15.0**, recarregue a extensão e a aba; se for HTML `file://`, ative **Permitir acesso a URLs de arquivo** nos Detalhes da extensão |
 | Texto antigo aparece | Atualize a extensão e recarregue as abas; a ponte verifica a atualidade antes de publicar |
 | Sem atividade em página de arquivo `file://` | Sirva o simulador por HTTP local; extensões Chrome precisam de permissão adicional para arquivos locais |
 

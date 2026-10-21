@@ -17,7 +17,7 @@ jobs:
           node-version: '22'
       - name: Syntax check
         run: |
-          for f in background.js kb190-bg.js kb190-bridge.js kb190-options.js kb190-ui.js bindings.js content.js sade-adapter.js relato-tools.js relato-ia-bg.js; do node --check "$f"; done
+          for f in background.js kb190-bg.js kb190-bridge.js kb190-options.js kb190-relay.js bindings.js content.js sade-adapter.js relato-tools.js relato-ia-bg.js; do node --check "$f"; done
       - name: Integrated extension static test
         run: |
           node test_integracao.js

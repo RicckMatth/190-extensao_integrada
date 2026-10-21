@@ -207,6 +207,14 @@ async function open(tabId,automatic=false){
   if(automatic)await chrome.scripting.executeScript({target:{tabId},func:()=>{window.__relatoEssencialAutomatic=true;}});
   // Injetar módulos de tema, serviço HERE, popup e adaptador SADE antes do content.js
   await chrome.scripting.executeScript({target:{tabId},files:['bindings.js','address-engine.js','sade-theme.js','here-service.js','address-popup.js','sade-adapter.js','municipios-pr.js','content.js','relato-tools.js']});
+  // Ao testar um simulador HTML por file://, injeta a ponte silenciosa
+  // no mesmo clique que restaura o painel original. Requer "Permitir acesso a URLs de arquivo".
+  // Nenhuma coleta de outros arquivos locais.
+  const currentTab=await chrome.tabs.get(tabId).catch(()=>null);
+  if(/^file:\/\/\//i.test(currentTab?.url||'')&&
+     /\/(?:teste[-_]sade|teste[-_]atendimento|sade[_-]simulador[_-]local)\.html$/i.test(new URL(currentTab.url).pathname)){
+    await chrome.scripting.executeScript({target:{tabId},files:['kb190-relay.js']}).catch(()=>{});
+  }
   await chrome.action.setBadgeText({tabId,text:''});
  }finally{injecting.delete(tabId);}
 }
