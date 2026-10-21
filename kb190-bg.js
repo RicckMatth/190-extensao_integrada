@@ -10,6 +10,8 @@
    'KB190_ANALYZE_LIVE','KB190_PUBLISH_LIVE']);
  const baseUrl=url=>{try{return new URL(url).origin===BASE;}catch{return false;}};
  const sadeUrl=url=>{try{const u=new URL(url),p=u.pathname.toLowerCase();
+   // Somente arquivos de simulador conhecidos, e apenas se o Chrome permitir file://.
+   if(u.protocol==='file:')return /\/(?:teste[-_]sade|teste[-_]atendimento|sade[_-]simulador[_-]local)\.html$/.test(p);
    return ['http:','https:'].includes(u.protocol)&&
      (p.includes('/syspm-web/public/')||/(?:teste[-_]sade|teste-atendimento|simulador)/.test(p));
    }catch{return false;}};

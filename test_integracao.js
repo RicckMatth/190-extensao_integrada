@@ -1,4 +1,4 @@
-/* Integridade v5.14.0 — extensão é SOMENTE uma ponte para a Base 190. */
+/* Integridade v5.15.0 — extensão é SOMENTE uma ponte para a Base 190. */
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=name=>fs.readFileSync(path.join(__dirname,name),'utf8');
@@ -6,7 +6,7 @@ const m=JSON.parse(read('manifest.json')),worker=read('kb190-bg.js'),bridge=read
   relay=read('kb190-relay.js'),bg=read('background.js'),adapter=read('sade-adapter.js'),opt=read('kb190-options.js');
 let count=0;function check(name,fn){fn();count++;console.log('✓ '+name);}
 check('Manifest MV3, versão 5.14.0',()=>{
-  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.14.0');
+  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.15.0');
 });
 check('SADE injeta automaticamente sem clique no ícone',()=>{
   const rule=m.content_scripts.find(c=>c.js.includes('kb190-relay.js'));
@@ -61,5 +61,28 @@ check('Adapter original mantém reconhecimento dos nove campos',()=>{
 check('Arquivos originais da extensão preservados',()=>{
   for(const f of ['icons/icon-16.png','icons/icon-48.png','icons/icon-128.png',
     'content.js','bindings.js','sade-adapter.js','relato-tools.js'])assert.ok(fs.existsSync(path.join(__dirname,f)));
+});
+check('Painel original é aberto pelo ícone e pode ser restaurado ao recarregar',()=>{
+  assert.ok(bg.includes('chrome.action.onClicked.addListener(async tab=>'));
+  assert.ok(bg.includes('await open(tab.id)'));
+  assert.ok(bg.includes('store.canRestore(tabId,tab.url)'));
+  assert.ok(bg.includes("files:['bindings.js','address-engine.js'"));
+  assert.ok(bg.includes("'content.js','relato-tools.js'"));
+  assert.ok(!bg.includes("'kb190-ui.js'"));
+});
+check('Suporte específico para simulador HTML local com acesso file URL',()=>{
+  assert.ok(bg.includes("files:['kb190-relay.js']"));
+  assert.ok(bg.includes("chrome.tabs.get(tabId)"));
+  assert.ok(worker.includes("u.protocol==='file:'"));
+  assert.ok(worker.includes("sade[_-]simulador[_-]local"));
+});
+check('Vínculo e cópia de campos preservados no content.js',()=>{
+  const content=read('content.js');
+  assert.ok(content.includes('RelatoAgilBindings'));
+  assert.ok(content.includes('autoBindFields'));
+  assert.ok(content.includes('Copiar'));
+  assert.ok(content.includes("nome:'Nome'"));
+  assert.ok(content.includes("telefone:'Telefone'"));
+  assert.ok(content.includes('render()'));
 });
 console.log(count+' verificações de ponte silenciosa concluídas.');

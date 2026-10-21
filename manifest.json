@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Relato 190 + Base de Conhecimento — MODELO TESTE",
-  "version": "5.14.0",
-  "description": "MODELO TESTE: ponte silenciosa de relato em tempo real; resultados exclusivamente no chat da Base 190.",
+  "version": "5.15.0",
+  "description": "MODELO TESTE: painel original de nome, telefone, endereço, vínculo de campos e Copiar restaurado; ponte silenciosa em tempo real com resultados só na Base 190.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -36,7 +36,7 @@
     "https://generativelanguage.googleapis.com/*",
     "https://base-conhecimento-190.vercel.app/*"
   ],
-  "version_name": "5.14.0-relay-silent.1",
+  "version_name": "5.15.0-restore-panel.1",
   "options_page": "kb190-options.html",
   "content_scripts": [
     {
