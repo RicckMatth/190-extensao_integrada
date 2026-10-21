@@ -30,7 +30,7 @@ Chat "Integração 190" na Base 190
 Natureza sugerida, justificativa, perguntas e reformulação opcional
 ```
 
-**Todos os resultados, feedbacks e orientações aparecem somente na página da Base 190.** A extensão não apresenta resultados nem abre sua antiga janela de análise. Caso o operador clique no ícone do complemento, ferramentas auxiliares originais poderão ser usadas, mas a análise do Cérebro 190 é exclusivamente da Base.
+**Todos os resultados, feedbacks e orientações aparecem somente na página da Base 190.** A extensão não apresenta resultados nem abre sua antiga janela de análise. Clicar no ícone do complemento **abre apenas as configurações**, sem exibir nenhuma janela de análise. A função de consulta pertence exclusivamente ao chat da Base 190.
 
 O sistema espera aproximadamente 1,15 segundo sem mudança do campo antes de analisar, e limita a frequência de envio. Atualizações sucessivas do mesmo relato substituem a análise anterior no chat, em vez de criar diversas respostas. A extensão verifica o conteúdo mais recente antes de publicar o resultado, evitando sugestões desatualizadas.
 
