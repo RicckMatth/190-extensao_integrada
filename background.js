@@ -225,5 +225,3 @@ chrome.tabs.onRemoved.addListener(async tabId=>{
  store.forgetTab(tabId).catch(()=>{});
 });
 // Sem restauração automática do painel legado. kb190-relay.js é injetado pelo manifest.
-
-});
