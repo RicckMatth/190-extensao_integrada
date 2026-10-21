@@ -206,7 +206,7 @@ async function open(tabId,automatic=false){
  try{
   if(automatic)await chrome.scripting.executeScript({target:{tabId},func:()=>{window.__relatoEssencialAutomatic=true;}});
   // Injetar módulos de tema, serviço HERE, popup e adaptador SADE antes do content.js
-  await chrome.scripting.executeScript({target:{tabId},files:['bindings.js','address-engine.js','sade-theme.js','here-service.js','address-popup.js','sade-adapter.js','municipios-pr.js','content.js','relato-tools.js','kb190-ui.js']});
+  await chrome.scripting.executeScript({target:{tabId},files:['bindings.js','address-engine.js','sade-theme.js','here-service.js','address-popup.js','sade-adapter.js','municipios-pr.js','content.js','relato-tools.js']});
   await chrome.action.setBadgeText({tabId,text:''});
  }finally{injecting.delete(tabId);}
 }
