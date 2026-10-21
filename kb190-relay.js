@@ -67,7 +67,7 @@
    }
  });
  async function tick(){
-   if(processing||document.visibilityState==='hidden')return;
+   if(processing)return; // Não perde a análise se o operador alternar de aba após digitar.
    if(!await checkEnabled())return;
    const el=findField();
    if(!el){observed='';field=null;return;}
