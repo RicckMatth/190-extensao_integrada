@@ -1,4 +1,4 @@
-/* Ponte Base 190 v5.13.0: sessão autenticada no domínio HTTPS.
+/* Ponte Base 190 v5.14.0: sessão autenticada, resultado apenas no site.
  * A autorização de envio NÃO vive no site. Ela fica na extensão (chrome.storage.local)
  * e é checada pela ponte novamente em cada análise.
  */
@@ -7,7 +7,7 @@
  const KEY='kb190.autoEnabled.v3';
  if(window!==window.top||location.origin!==ORIGIN||globalThis.__kb190BridgeActive)return;
  globalThis.__kb190BridgeActive=true;
- function announce(){window.dispatchEvent(new CustomEvent('base190:extension-ready',{detail:{version:'5.13.0'}}));}
+ function announce(){window.dispatchEvent(new CustomEvent('base190:extension-ready',{detail:{version:'5.14.0'}}));}
  window.addEventListener('base190:extension-discover',announce);
  window.addEventListener('base190:open-settings',()=>{
    chrome.runtime.sendMessage({type:'KB190_OPEN_OPTIONS'}).catch(()=>{});
@@ -29,24 +29,13 @@
    }finally{clearTimeout(timer);}
  }
  const enabled=async()=>((await chrome.storage.local.get(KEY))[KEY]===true);
- window.addEventListener('base190:site-analysis',async e=>{
-   const m=e?.detail;
-   if(!m?.result||!['classificacao','faq','indefinido'].includes(m.result.tipo))return;
-   try{
-     if(JSON.stringify(m).length>40000||!await enabled())return;
-     const session=await json('/api/session');
-     if(!session.ok||!session.data?.user||session.data.user.mustChangePassword)return;
-     if(!await enabled())return;
-     await chrome.runtime.sendMessage({type:'KB190_SITE_RESULT',result:m.result,
-       disclaimer:String(m.disclaimer||'').slice(0,1200)});
-   }catch{}
- });
  announce();
  chrome.runtime.onMessage.addListener((m,sender,reply)=>{
    if(sender.id!==chrome.runtime.id)return false;
    if(m?.type==='KB190_RESULT'){
      if(m.result&&['classificacao','faq','indefinido'].includes(m.result.tipo)&&JSON.stringify(m.result).length<=40000){
        window.dispatchEvent(new CustomEvent('base190:extension-result',{detail:{result:m.result,
+         sourceText:String(m.sourceText||'').slice(0,1800),
          disclaimer:String(m.disclaimer||'').slice(0,1200),at:Number(m.at)||Date.now()}}));
      }
      reply({ok:true});return false;
