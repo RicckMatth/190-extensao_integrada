@@ -203,6 +203,11 @@
       </div>
       <div class="settingsView" id="settingsView" hidden>
       <h3>Configurações</h3><p class="settingsIntro">Gerencie vínculos e preferências. O conteúdo digitado durante o atendimento não é salvo.</p>
+      <div class="settingsBox" id="liveRelatoSettings">
+        <div class="settingsTitle">✳ Relato ao vivo / dinâmico</div>
+        <p class="settingsIntro">Integre o texto do relato à Base 190 automaticamente. A configuração e o teste de conexão são realizados em uma página segura da própria extensão. Todas as respostas permanecem no chat da Base.</p>
+        <button type="button" class="mapsLink" id="openDynamicRelatoSettings">⚙ Configurar relato ao vivo / dinâmico</button>
+      </div>
       <div class="sadeSettingsBox" id="sadeSettingsBox" hidden>
         <div class="sadeSettingsTitle" id="sadeSettingsTitle">SADE &mdash; reconhecimento autom&aacute;tico</div>
         <p class="settingsIntro" id="sadeSettingsMsg"></p>
@@ -286,6 +291,12 @@
   panel.querySelector('.close').addEventListener('click',()=>toggle(false));
   $('#configure').addEventListener('click',()=>{toggle(true);showSettings(true);});
   $('#settingsToggle').addEventListener('click',()=>showSettings());
+  $('#openDynamicRelatoSettings').addEventListener('click',async()=>{
+    try{
+      const response=await chrome.runtime.sendMessage({type:'KB190_OPEN_OPTIONS'});
+      if(!response?.ok)throw Error(response?.error||'Não foi possível abrir as opções.');
+    }catch(error){show('Configurações do relato ao vivo: '+String(error?.message||error));}
+  });
   $('#openmaps').addEventListener('click',()=>openMaps());
   $('#quickmap').addEventListener('click',()=>openMaps());
   $('#mapsNow').addEventListener('click',()=>syncMaps(true));

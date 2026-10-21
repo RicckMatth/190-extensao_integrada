@@ -1,4 +1,4 @@
-/* Integridade v5.15.0 — extensão é SOMENTE uma ponte para a Base 190. */
+/* Integridade v5.15.1 — extensão é SOMENTE uma ponte para a Base 190. */
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=name=>fs.readFileSync(path.join(__dirname,name),'utf8');
@@ -6,7 +6,7 @@ const m=JSON.parse(read('manifest.json')),worker=read('kb190-bg.js'),bridge=read
   relay=read('kb190-relay.js'),bg=read('background.js'),adapter=read('sade-adapter.js'),opt=read('kb190-options.js');
 let count=0;function check(name,fn){fn();count++;console.log('✓ '+name);}
 check('Manifest MV3, versão 5.14.0',()=>{
-  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.15.0');
+  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.15.1');
 });
 check('SADE injeta automaticamente sem clique no ícone',()=>{
   const rule=m.content_scripts.find(c=>c.js.includes('kb190-relay.js'));
@@ -84,5 +84,22 @@ check('Vínculo e cópia de campos preservados no content.js',()=>{
   assert.ok(content.includes("nome:'Nome'"));
   assert.ok(content.includes("telefone:'Telefone'"));
   assert.ok(content.includes('render()'));
+});
+check('Painel original possui opção de Relato ao vivo/dinâmico',()=>{
+  const content=read('content.js');
+  assert.ok(content.includes('id="openDynamicRelatoSettings"'));
+  assert.ok(content.includes("$('#openDynamicRelatoSettings').addEventListener"));
+  assert.ok(content.includes("type:'KB190_OPEN_OPTIONS'"));
+  assert.ok(content.includes("id=\"execute\""));
+});
+check('Configurações salvam autorização e testam Base automaticamente',()=>{
+  const html=read('kb190-options.html');
+  assert.ok(html.includes('Relato ao vivo / dinâmico'));
+  assert.ok(html.includes('autoEnabled'));
+  assert.ok(opt.includes("type:'KB190_SET_AUTO'"));
+  assert.ok(opt.includes("type:'KB190_STATUS'"));
+  assert.ok(opt.includes('Autorização salva e integração testada com sucesso'));
+  assert.ok(worker.includes('optionsOpener'));
+  assert.ok(worker.includes("m.type==='KB190_SET_AUTO'&&!extSender"));
 });
 console.log(count+' verificações de ponte silenciosa concluídas.');
