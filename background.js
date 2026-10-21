@@ -210,13 +210,10 @@ async function open(tabId,automatic=false){
   await chrome.action.setBadgeText({tabId,text:''});
  }finally{injecting.delete(tabId);}
 }
-chrome.action.onClicked.addListener(async tab=>{
- if(!Number.isInteger(tab.id))return;
- try{await open(tab.id);}catch(_){
-  await chrome.action.setBadgeBackgroundColor({tabId:tab.id,color:'#B45309'});
-  await chrome.action.setBadgeText({tabId:tab.id,text:'!'});
-  await chrome.action.setTitle({tabId:tab.id,title:'Abra um site comum e clique novamente. Para HTML local, habilite acesso a URLs de arquivo.'});
- }
+// A extensão integrada é apenas uma ponte: clique no ícone abre as configurações,
+// nunca o painel antigo de análise/resultado.
+chrome.action.onClicked.addListener(()=>{
+  chrome.runtime.openOptionsPage().catch(()=>{});
 });
 chrome.tabs.onRemoved.addListener(async tabId=>{
  await loadConnections();
@@ -227,7 +224,6 @@ chrome.tabs.onRemoved.addListener(async tabId=>{
  if(changed)await saveConnections().catch(()=>{});
  store.forgetTab(tabId).catch(()=>{});
 });
-chrome.tabs.onUpdated.addListener((tabId,change,tab)=>{
- if(change.status!=='complete')return;
- store.canRestore(tabId,tab.url).then(can=>{if(can)return open(tabId,true);}).catch(()=>{});
+// Sem restauração automática do painel legado. kb190-relay.js é injetado pelo manifest.
+
 });
