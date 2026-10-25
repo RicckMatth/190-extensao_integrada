@@ -6,7 +6,7 @@ const m=JSON.parse(read('manifest.json')),worker=read('kb190-bg.js'),bridge=read
   relay=read('kb190-relay.js'),bg=read('background.js'),adapter=read('sade-adapter.js'),opt=read('kb190-options.js');
 let count=0;function check(name,fn){fn();count++;console.log('✓ '+name);}
 check('Manifest MV3, versão 5.14.0',()=>{
-  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.15.1');
+  assert.equal(m.manifest_version,3);assert.equal(m.version,'5.16.0');
 });
 check('SADE injeta automaticamente sem clique no ícone',()=>{
   const rule=m.content_scripts.find(c=>c.js.includes('kb190-relay.js'));
@@ -103,3 +103,4 @@ check('Configurações salvam autorização e testam Base automaticamente',()=>{
   assert.ok(worker.includes("m.type==='KB190_SET_AUTO'&&!extSender"));
 });
 console.log(count+' verificações de ponte silenciosa concluídas.');
+

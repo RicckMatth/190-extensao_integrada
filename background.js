@@ -1,5 +1,5 @@
 'use strict';
-importScripts('bindings.js','address-engine.js','relato-ia-bg.js','kb190-bg.js');
+importScripts('analysis-protocol.js','bindings.js','address-engine.js','relato-ia-bg.js','kb190-bg.js');
 // sade-adapter.js é injetado como content script junto ao content.js (não precisa de importScripts)
 const store=RelatoAgilBindings.server(chrome);
 const injecting=new Set();
@@ -239,3 +239,4 @@ chrome.tabs.onUpdated.addListener((tabId,change,tab)=>{
  if(change.status!=='complete')return;
  store.canRestore(tabId,tab.url).then(can=>{if(can)return open(tabId,true);}).catch(()=>{});
 });
+

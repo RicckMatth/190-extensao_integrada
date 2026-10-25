@@ -38,7 +38,7 @@ const bindingsCode = fs.readFileSync('bindings.js', 'utf8');
 test('1. Manifest V3: versão 5.8.0 e estrutura válida', () => {
   const manifest = JSON.parse(manifestCode);
   assert.strictEqual(manifest.manifest_version, 3, 'Deve ser Manifest V3');
-  assert.strictEqual(manifest.version, '5.15.1', 'Versão com Relato ao vivo/dinâmico nas configurações deve ser 5.15.1');
+  assert.strictEqual(manifest.version, '5.16.0', 'Versão com Relato ao vivo/dinâmico nas configurações deve ser 5.16.0');
   assert.ok(manifest.permissions.includes('activeTab'), 'Permissão activeTab');
   assert.ok(manifest.permissions.includes('scripting'), 'Permissão scripting');
   assert.ok(manifest.permissions.includes('storage'), 'Permissão storage');
@@ -286,3 +286,4 @@ console.log(`========================================================\n`);
 if (passedTests !== totalTests) {
   process.exit(1);
 }
+
