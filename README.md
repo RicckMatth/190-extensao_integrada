@@ -1,5 +1,13 @@
 # Relato 190 ↔ Base de Conhecimento — v5.15.1 (MODELO DE TESTE)
 
+## Novo: Script para Pacific Monkey (v2.0.0)
+
+[**⬇ BAIXAR O SCRIPT .user.js DIRETAMENTE**](https://raw.githubusercontent.com/RicckMatth/190-extensao_integrada/main/scripts/relato190-pacific-monkey.user.js) · [Guia de instalação e diagnóstico](scripts/README.md)
+
+Esta é uma **versão local de testes**, independente da extensão completa. Detecta nove campos, oferece vínculo manual, prévia, cópia sem alterar, inserção em CAPS e desfazer seguro. **Não envia relatos à Base 190 nem a serviços externos, não armazena dados de atendimento e não executa despachos.**
+
+O arquivo está configurado para `http://localhost/*`; para uma página institucional, é necessário **autorização formal** e alteração do domínio exato no editor do Pacific Monkey. Evite ativar simultaneamente a extensão original e o script na mesma página. Não é homologado para uso com ocorrências reais.
+
 > **EXPERIMENTAL · NÃO HOMOLOGADO PARA USO OPERACIONAL.** Teste somente com relatos fictícios e ambiente simulado. Dados reais de atendimento podem conter informações pessoais e sigilosas.
 
 ## Baixar e instalar
