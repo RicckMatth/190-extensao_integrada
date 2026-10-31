@@ -22,5 +22,9 @@ jobs:
         run: |
           node test_integracao.js
           node test_integracao_runtime.cjs
+      - name: Pacific Monkey userscript v2 regression tests
+        run: |
+          node --check scripts/relato190-pacific-monkey.user.js
+          node --test test_pacific_monkey.cjs
       - name: Original SADE regression tests
         run: node test_sade_suite.js
