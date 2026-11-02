@@ -6,6 +6,7 @@
  if(globalThis.__base190SilentRelay)return;
  globalThis.__base190SilentRelay=true;
  const KEY='kb190.autoEnabled.v3';
+ const streamId=crypto.randomUUID();
  const MIN_CHARS=20,STABLE_MS=1150,MIN_INTERVAL_MS=2400;
  const bindings=globalThis.RelatoAgilBindings;
  let latest=null,field=null,observed='',since=Date.now(),sent='',lastSendAt=0;
@@ -52,7 +53,8 @@
    if(!force&&now-lastEnabledAt<1800)return enabled;
    if(checking)return enabled;
    checking=true;lastEnabledAt=now;
-   try{enabled=(await chrome.storage.local.get(KEY))[KEY]===true;}catch{enabled=false;}
+   // Default-on for a fresh installation; explicit false is the operator opt-out.
+   try{enabled=(await chrome.storage.local.get(KEY))[KEY]!==false;}catch{enabled=false;}
    finally{checking=false;}
    return enabled;
  }
@@ -62,28 +64,41 @@
  });
  chrome.storage.onChanged.addListener((changes,area)=>{
    if(area==='local'&&Object.prototype.hasOwnProperty.call(changes,KEY)){
-     enabled=changes[KEY].newValue===true;lastEnabledAt=Date.now();
+     enabled=changes[KEY].newValue!==false;lastEnabledAt=Date.now();
      if(!enabled){sent='';nextTryAt=0;}
    }
  });
+ function invalidate(){
+   sent='';nextTryAt=0;
+   void chrome.runtime.sendMessage({type:'KB190_INVALIDATE_LIVE',streamId}).catch(()=>{});
+ }
+ function onFieldEdit(event){
+   if(field&&event.target===field){
+     const value=textOf(field);
+     if(value!==observed){observed=value;since=Date.now();invalidate();}
+   }
+ }
+ document.addEventListener('input',onFieldEdit,true);
+ document.addEventListener('change',onFieldEdit,true);
  async function tick(){
    if(processing)return; // Não perde a análise se o operador alternar de aba após digitar.
    if(!await checkEnabled())return;
    const el=findField();
    if(!el){observed='';field=null;return;}
    const text=textOf(el),now=Date.now();
-   if(text!==observed){observed=text;since=now;return;}
+   if(text!==observed){observed=text;since=now;invalidate();return;}
    if(text.length<MIN_CHARS||text===sent||now-since<STABLE_MS||
        now-lastSendAt<MIN_INTERVAL_MS||now<nextTryAt)return;
    if(!await checkEnabled(true))return;
    processing=true;lastSendAt=now;
    try{
-     const response=await chrome.runtime.sendMessage({type:'KB190_ANALYZE_LIVE',text});
+     const response=await chrome.runtime.sendMessage({type:'KB190_ANALYZE_LIVE',text,streamId});
      if(!response?.ok)throw Error(response?.error||'Base 190 indisponível');
      if(response.skip){sent=text;return;}
+     if(response.stale)return;
      if(textOf(el)!==text||!await checkEnabled(true))return;
      const publish=await chrome.runtime.sendMessage({type:'KB190_PUBLISH_LIVE',
-       requestId:response.requestId,text});
+       requestId:response.requestId,text,streamId});
      if(publish?.ok){sent=text;nextTryAt=0;}
      else throw Error(publish?.error||'Resultado não sincronizado');
    }catch{
