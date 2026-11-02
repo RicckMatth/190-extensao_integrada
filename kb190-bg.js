@@ -1,13 +1,13 @@
-/* Base 190 v5.14 — roteador seguro. Análise/feedback somente na Base.
- * Autorização no Chrome (default OFF), sessão HTTP-only exigida pela Base,
+/* Base 190 v5.15.2 — roteador seguro. Análise/feedback somente na Base.
+ * Compartilhamento default ON com opt-out na extensão, sessão HTTP-only exigida pela Base,
  * remetente SADE validado, confirmação de atualidade antes de publicar.
  */
 (()=>{'use strict';
  const BASE='https://base-conhecimento-190.vercel.app';
  const KEY='kb190.autoEnabled.v3',EXT=chrome.runtime.getURL('');
- const recent=new Map(),pending=new Map();
+ const recent=new Map(),pending=new Map(),analysisVersions=new Map();
  const allowed=new Set(['KB190_STATUS','KB190_SET_AUTO','KB190_OPEN_BASE','KB190_OPEN_OPTIONS',
-   'KB190_ANALYZE_LIVE','KB190_PUBLISH_LIVE']);
+   'KB190_ANALYZE_LIVE','KB190_PUBLISH_LIVE','KB190_INVALIDATE_LIVE']);
  const baseUrl=url=>{try{return new URL(url).origin===BASE;}catch{return false;}};
  const sadeUrl=url=>{try{const u=new URL(url),p=u.pathname.toLowerCase();
    // Somente arquivos de simulador conhecidos, e apenas se o Chrome permitir file://.
@@ -15,7 +15,8 @@
    return ['http:','https:'].includes(u.protocol)&&
      (p.includes('/syspm-web/public/')||/(?:teste[-_]sade|teste-atendimento|simulador)/.test(p));
    }catch{return false;}};
- const isEnabled=async()=>((await chrome.storage.local.get(KEY))[KEY]===true);
+ // New installations share by default; an explicit false is the opt-out.
+ const isEnabled=async()=>((await chrome.storage.local.get(KEY))[KEY]!==false);
  const baseTabs=async()=>(await chrome.tabs.query({})).filter(t=>Number.isInteger(t.id)&&baseUrl(t.url));
  async function openBase(){
    const tabs=await baseTabs();
@@ -47,43 +48,61 @@
      return {connected:true,enabled,user:user.username,role:user.role,origin:BASE};
    }catch(e){return {connected:false,enabled,origin:BASE,reason:String(e.message||e).slice(0,220)};}
  }
- const keyOf=sender=>String(sender.tab.id)+':'+String(sender.frameId||0);
- async function analyzeLive(sender,text){
+ const keyOf=(sender,streamId)=>String(sender.tab.id)+':'+String(sender.frameId||0)+':'+String(streamId||'legacy');
+ async function clearBaseResult(sourceId,version){
+   for(const tab of await baseTabs()){
+     try{await chrome.tabs.sendMessage(tab.id,{type:'KB190_CLEAR_RESULT',sourceId,version});return;}catch{}
+   }
+ }
+ async function invalidateLive(sender,streamId){
+   const key=keyOf(sender,streamId),version=(analysisVersions.get(key)||0)+1;
+   analysisVersions.set(key,version);
+   pending.delete(key);recent.delete(key);
+   // The Base chat clears the previous answer while the operator is editing.
+   void clearBaseResult(key,version);
+   return {invalidated:true,sourceId:key,version};
+ }
+ async function analyzeLive(sender,text,streamId){
    if(!await isEnabled())throw Error('Ative a análise nas Configurações da extensão.');
-   const tabId=sender.tab.id,now=Date.now();
-   const old=recent.get(tabId);
+   const tabId=sender.tab.id,key=keyOf(sender,streamId),now=Date.now();
+   const version=(analysisVersions.get(key)||0)+1;
+   analysisVersions.set(key,version);
+   const old=recent.get(key);
    if(old?.text===text&&now-old.at<20000)return {skip:true};
-   recent.set(tabId,{text,at:now});
+   recent.set(key,{text,at:now});
    try{
      const {tab,user}=await sessionTab();
+     if(analysisVersions.get(key)!==version)return {stale:true};
      if(!await isEnabled())throw Error('Transmissão desativada.');
      const data=await bridge(tab,'analyze',text);
+     if(analysisVersions.get(key)!==version)return {stale:true};
      if(!await isEnabled())throw Error('Transmissão desativada.');
      if(!data?.result||typeof data.result!=='object')throw Error('Resultado inválido.');
      const requestId=crypto.randomUUID();
-     pending.set(keyOf(sender),{requestId,tabId:tab.id,userId:String(user.id),text,
+     pending.set(key,{requestId,tabId:tab.id,userId:String(user.id),text,version,
        result:data.result,disclaimer:String(data.disclaimer||'').slice(0,1200),at:Date.now()});
-     return {requestId};
+     return {requestId,version};
    }catch(e){
-     if(recent.get(tabId)?.text===text)recent.delete(tabId);
+     if(recent.get(key)?.text===text)recent.delete(key);
      throw e;
    }
  }
- async function publishLive(sender,requestId,text){
-   const key=keyOf(sender),entry=pending.get(key);
-   if(!entry||entry.requestId!==requestId||entry.text!==text)
+ async function publishLive(sender,requestId,text,streamId){
+   const key=keyOf(sender,streamId),entry=pending.get(key);
+   if(!entry||entry.requestId!==requestId||entry.text!==text||entry.version!==analysisVersions.get(key))
      throw Error('Solicitação obsoleta ou inválida.');
    pending.delete(key);
    if(Date.now()-entry.at>15000)throw Error('Resultado expirou.');
    if(!await isEnabled())throw Error('Transmissão desativada.');
    const {tab,user}=await sessionTab();
+   if(analysisVersions.get(key)!==entry.version)throw Error('Relato alterado durante a análise; resultado descartado.');
    if(tab.id!==entry.tabId||String(user.id)!==entry.userId)
      throw Error('Sessão da Base 190 alterada.');
    if(!await isEnabled())throw Error('Autorização revogada.');
    // Envia apenas à aba da Base 190 que realizou o processamento, nunca ao SADE.
    const r=await chrome.tabs.sendMessage(tab.id,{type:'KB190_RESULT',
      result:entry.result,sourceText:text.slice(0,1800),
-     disclaimer:entry.disclaimer,at:Date.now()});
+     disclaimer:entry.disclaimer,sourceId:key,version:entry.version,at:Date.now()});
    if(!r?.ok)throw Error('Chat da Base 190 não recebeu resultado.');
    return {delivered:true};
  }
@@ -105,27 +124,35 @@
    if(['KB190_ANALYZE_LIVE','KB190_PUBLISH_LIVE'].includes(m.type)&&!sadeSender){
      reply({ok:false,error:'Somente o SADE/simulador pode enviar relatos.'});return false;
    }
+   if(m.type==='KB190_INVALIDATE_LIVE'&&!sadeSender){
+     reply({ok:false,error:'Somente o SADE/simulador pode invalidar uma análise.'});return false;
+   }
    (async()=>{
      if(m.type==='KB190_OPEN_OPTIONS'){await chrome.runtime.openOptionsPage();return {opened:true};}
      if(m.type==='KB190_OPEN_BASE')return openBase();
      if(m.type==='KB190_SET_AUTO'){
        if(typeof m.enabled!=='boolean')throw Error('Estado de autorização inválido.');
        await chrome.storage.local.set({[KEY]:m.enabled});
-       if(!m.enabled){pending.clear();recent.clear();}
+       if(!m.enabled){
+         pending.clear();recent.clear();
+         for(const [key,version] of analysisVersions)analysisVersions.set(key,version+1);
+       }
        return {enabled:await isEnabled()};
      }
      if(m.type==='KB190_STATUS')return status();
+     if(m.type==='KB190_INVALIDATE_LIVE')return invalidateLive(sender,m.streamId);
      const text=String(m.text||'');
      if(text.length<20||text.length>8000)throw Error('Relato fora dos limites de análise ao vivo.');
-     if(m.type==='KB190_ANALYZE_LIVE')return analyzeLive(sender,text);
+     if(m.type==='KB190_ANALYZE_LIVE')return analyzeLive(sender,text,m.streamId);
      if(typeof m.requestId!=='string')throw Error('Identificador da análise inválido.');
-     return publishLive(sender,m.requestId,text);
+     return publishLive(sender,m.requestId,text,m.streamId);
    })().then(x=>reply({ok:true,...x}))
      .catch(e=>reply({ok:false,error:String(e?.message||e).slice(0,300)}));
    return true;
  });
  chrome.tabs.onRemoved.addListener(id=>{
    recent.delete(id);
-   for(const [k,x] of pending)if(x.tabId===id||k.startsWith(id+':'))pending.delete(k);
+   for(const map of [pending,analysisVersions,recent])
+     for(const k of map.keys())if(String(k).startsWith(id+':'))map.delete(k);
  });
 })();
