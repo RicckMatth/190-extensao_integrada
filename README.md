@@ -1,4 +1,4 @@
-# Relato 190 ↔ Base de Conhecimento — v5.15.1 (MODELO DE TESTE)
+# Relato 190 ↔ Base de Conhecimento — v5.15.2 (MODELO DE TESTE)
 
 ## Novo: Script para Pacific Monkey (v2.0.0)
 
@@ -18,8 +18,8 @@ O arquivo está configurado para `http://localhost/*`; para uma página instituc
 2. Abra `chrome://extensions` → habilite **Modo do desenvolvedor**.
 3. Remova a versão de teste antiga ou substitua os arquivos na pasta já instalada e clique em **Atualizar**. Evite instalações duplicadas.
 4. **Carregar sem compactação** → selecione a pasta que contém `manifest.json`.
-5. Em **Detalhes → Opções da extensão**, ative **Análise automática de relatos**.
-6. Abra [a Base 190](https://base-conhecimento-190.vercel.app/) e faça login no mesmo perfil Chrome. **Não existe autorização adicional na página da Base.**
+5. A análise ao vivo inicia ativada automaticamente. Abra [a Base 190](https://base-conhecimento-190.vercel.app/) e faça login no mesmo perfil Chrome. **Não existe confirmação por análise na página da Base.**
+6. Para interromper os envios, acesse as opções da extensão e desligue **Compartilhar relato com a Base 190**.
 7. Abra o SADE ou simulador compatível e digite um relato fictício.
 
 **O painel original do Relato 190 foi restaurado.** Clique no ícone da extensão para abrir a interface de associação dos campos, coleta de nome, telefone e endereço, ferramentas de mapas/CEP, preenchimento e botão **Copiar**. O painel também é restaurado após navegação nas abas previamente vinculadas, como na versão original. A análise automática é um recurso adicional e **não exige abrir o painel**.
@@ -28,11 +28,10 @@ O arquivo está configurado para `http://localhost/*`; para uma página instituc
 
 No painel original da extensão, clique em **⚙ Configurações** → **Relato ao vivo / dinâmico** → **Configurar relato ao vivo / dinâmico**. Uma página da **própria extensão** abrirá, sem perder o painel de atendimento.
 
-1. Ative a chave **Autorizar relato ao vivo / dinâmico**.
-2. A autorização é salva em `chrome.storage.local` e **continua ativa até você desativá-la**, mesmo após fechar ou reabrir o Chrome.
-3. A extensão **testa automaticamente** se a Base 190 está aberta e autenticada no mesmo perfil do Chrome. Havendo sessão válida, mostrará **"Autorização salva e integração testada com sucesso!"**.
-4. Se o site estiver fechado ou sem login, a autorização continuará guardada; abra [a Base 190](https://base-conhecimento-190.vercel.app/), faça login e clique em **Testar integração agora**. Não precisa autorizar de novo.
-5. A partir daí, o texto principal do SADE é transmitido automaticamente, respeitando os limites e a pausa de digitação já existentes. Resultados e feedback continuam **exclusivamente no chat da Base 190**.
+1. A chave **Compartilhar relato com a Base 190** inicia ligada em uma instalação nova. A preferência fica salva em `chrome.storage.local` e continua ativa após fechar o Chrome.
+2. A extensão testa automaticamente se a Base 190 está aberta e autenticada no mesmo perfil. Se não estiver, basta entrar na Base; não é preciso autorizar cada análise.
+3. Desligue a chave nas opções da extensão quando quiser interromper os envios.
+4. O texto principal do SADE é transmitido após uma pausa na digitação. Enquanto o relato muda, a Base remove a resposta anterior e só publica o resultado se ele ainda corresponder à versão mais recente. Os resultados ficam **exclusivamente no chat da Base 190**.
 
 **Sem mudanças nas demais funções:** o painel de nome, telefone, endereço, vínculos de campos, botão Copiar, mapas, perfis, preenchimento assistido e regras da ponte de análise permanecem preservados.
 
@@ -52,14 +51,14 @@ Natureza sugerida, justificativa, perguntas e reformulação opcional
 
 **Todos os resultados, feedbacks e orientações aparecem somente na página da Base 190.** A extensão **não apresenta resultados da Base 190** nem exibe a janela de análise integrada. Clicar no ícone do complemento abre **o painel original de atendimento** (nome, telefone, endereço, associação de campos, Copiar e ferramentas auxiliares). O resultado do Cérebro 190 continua **exclusivo ao chat do site**.
 
-O sistema espera aproximadamente 1,15 segundo sem mudança do campo antes de analisar, e limita a frequência de envio. Atualizações sucessivas do mesmo relato substituem a análise anterior no chat, em vez de criar diversas respostas. A extensão verifica o conteúdo mais recente antes de publicar o resultado, evitando sugestões desatualizadas.
+O sistema espera aproximadamente 1,15 segundo sem mudança do campo antes de analisar. Uma mudança no texto invalida imediatamente análises pendentes e limpa a resposta anterior do chat; cada resultado também é conferido contra a versão atual antes de ser publicado. Atualizações substituem a análise anterior no mesmo painel.
 
 ## Autorização e segurança
 
-- **Autorização apenas na extensão**, no interruptor de **Análise automática de relatos**. É desativada por padrão e salva no `chrome.storage.local`.
+- **Preferência apenas na extensão**, no interruptor de compartilhamento. Inicia ativada em instalação nova e pode ser desligada a qualquer momento; a escolha explícita fica salva em `chrome.storage.local`.
 - **Autenticação apenas na Base 190**, com cookie seguro `HttpOnly`; a extensão não lê cookies, tokens ou senhas.
 - **HTTPS/TLS** criptografa os dados em trânsito, mas **não é criptografia ponta a ponta**: a Base recebe e processa o texto.
-- O serviço só recebe o texto do relato detectado. **O próprio texto pode conter dados pessoais**, então não habilite envio automático para ocorrências reais sem avaliação e autorização institucional.
+- O serviço recebe o texto do relato detectado. **O próprio texto pode conter dados pessoais**; mantenha o compartilhamento desligado para ocorrências reais até haver avaliação e autorização institucional.
 - A extensão preserva o **preenchimento assistido original dos campos do SADE** e o botão Copiar. Ela **não aplica classificações retornadas pela Base ao SADE** e não envia ocorrências, não escolhe despacho nem executa ações oficiais. As classificações são orientativas e não homologadas.
 - Revogar o interruptor bloqueia novas análises; resultados pendentes também são descartados pela ponte.
 
@@ -71,10 +70,10 @@ O **painel** também pode ser aberto em um HTML local `file://` clicando no íco
 
 | Sintoma | Verificação |
 |---|---|
-| Não analisa automaticamente | Confirme v5.15.1, interruptor ativado e login na Base 190 |
+| Não analisa automaticamente | Confirme v5.15.2, interruptor ligado e login na Base 190 |
 | Sem resultado no chat | Mantenha a Base 190 aberta, recarregue as duas abas e teste com 20+ caracteres |
 | Campo SADE não reconhecido | Confira o adaptador e o endereço da página; a automação só envia quando encontra um campo de relato com confiança suficiente |
-| Painel não abre ao clicar no ícone | Use **v5.15.1**, recarregue a extensão e a aba; se for HTML `file://`, ative **Permitir acesso a URLs de arquivo** nos Detalhes da extensão |
+| Painel não abre ao clicar no ícone | Use **v5.15.2**, recarregue a extensão e a aba; se for HTML `file://`, ative **Permitir acesso a URLs de arquivo** nos Detalhes da extensão |
 | Texto antigo aparece | Atualize a extensão e recarregue as abas; a ponte verifica a atualidade antes de publicar |
 | Sem atividade em página de arquivo `file://` | Sirva o simulador por HTTP local; extensões Chrome precisam de permissão adicional para arquivos locais |
 

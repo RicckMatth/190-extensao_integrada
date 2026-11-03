@@ -205,7 +205,7 @@
       <h3>Configurações</h3><p class="settingsIntro">Gerencie vínculos e preferências. O conteúdo digitado durante o atendimento não é salvo.</p>
       <div class="settingsBox" id="liveRelatoSettings">
         <div class="settingsTitle">✳ Relato ao vivo / dinâmico</div>
-        <p class="settingsIntro">Integre o texto do relato à Base 190 automaticamente. A configuração e o teste de conexão são realizados em uma página segura da própria extensão. Todas as respostas permanecem no chat da Base.</p>
+        <p class="settingsIntro">O compartilhamento do campo Relato com a Base 190 inicia ativado e ocorre após uma pausa na digitação. Abra as opções para desativar quando quiser. Somente o texto do relato é enviado; as respostas ficam no chat da Base.</p>
         <button type="button" class="mapsLink" id="openDynamicRelatoSettings">⚙ Configurar relato ao vivo / dinâmico</button>
       </div>
       <div class="sadeSettingsBox" id="sadeSettingsBox" hidden>

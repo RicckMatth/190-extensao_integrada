@@ -28,7 +28,8 @@
      return {ok:true,data};
    }finally{clearTimeout(timer);}
  }
- const enabled=async()=>((await chrome.storage.local.get(KEY))[KEY]===true);
+ // Sharing starts enabled for new installs; a saved false remains an opt-out.
+ const enabled=async()=>((await chrome.storage.local.get(KEY))[KEY]!==false);
  announce();
  chrome.runtime.onMessage.addListener((m,sender,reply)=>{
    if(sender.id!==chrome.runtime.id)return false;
@@ -36,8 +37,14 @@
      if(m.result&&['classificacao','faq','indefinido'].includes(m.result.tipo)&&JSON.stringify(m.result).length<=40000){
        window.dispatchEvent(new CustomEvent('base190:extension-result',{detail:{result:m.result,
          sourceText:String(m.sourceText||'').slice(0,1800),
-         disclaimer:String(m.disclaimer||'').slice(0,1200),at:Number(m.at)||Date.now()}}));
+         disclaimer:String(m.disclaimer||'').slice(0,1200),sourceId:String(m.sourceId||'').slice(0,100),
+         version:Number(m.version)||0,at:Number(m.at)||Date.now()}}));
      }
+     reply({ok:true});return false;
+   }
+   if(m?.type==='KB190_CLEAR_RESULT'){
+     window.dispatchEvent(new CustomEvent('base190:extension-pending',{detail:{
+       sourceId:String(m.sourceId||'').slice(0,100),version:Number(m.version)||0,at:Date.now()}}));
      reply({ok:true});return false;
    }
    if(m?.type!=='KB190_BRIDGE')return false;

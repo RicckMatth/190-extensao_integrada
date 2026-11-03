@@ -20,7 +20,7 @@
          (s.reason||'abra a Base 190 e faça login no mesmo navegador.')+
          ' Após entrar na Base, clique em Testar integração agora. Não é preciso autorizar de novo.';
      }else{
-       notice.textContent='○ Relato ao vivo desativado. Ative a chave para salvar a autorização e testar a integração.';
+      notice.textContent='○ Compartilhamento desativado neste perfil do Chrome. Ative a chave para retomar as análises automáticas.';
      }
    }catch(e){notice.textContent='Erro ao verificar status: '+e.message;}
    finally{notice.setAttribute('aria-busy','false');}
